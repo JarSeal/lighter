@@ -16,5 +16,11 @@ export const Base = (props: TProps) => {
     })
   );
   baseCmp.add(Nav());
+  baseCmp.add(
+    CMP({
+      html: '<input type="text" />',
+      listeners: [{ type: 'input', fn: () => console.log('INPUT') }],
+    })
+  );
   return baseCmp;
 };

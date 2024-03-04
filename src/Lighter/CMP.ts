@@ -5,6 +5,8 @@ const cmps: { [key: string]: TCMP } = {};
 
 export type TListener = (cmp: TCMP, e: Event) => void;
 
+export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
+
 export type TProps = {
   id?: string;
   idAttr?: boolean;
@@ -12,7 +14,7 @@ export type TProps = {
   text?: string;
   tag?: string;
   html?: string;
-  // class?: string | string[];
+  class?: string | string[];
   // attr?: string | string[];
   onClick?: TListener;
   // onHover?: TListener;
@@ -35,7 +37,7 @@ export type TCMP = {
   remove: () => TCMP;
   update: (newProps?: TProps) => TCMP;
   // updateAttr: (newAttr: string | string[]) => TCMP;
-  // updateClass: (newClass: string | string[], replace: boolean) => TCMP;
+  updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   // updateText: (newText: string) => TCMP;
 };
 
@@ -59,6 +61,7 @@ export const CMP = (props?: TProps): TCMP => {
     add: (child) => addChild(cmp, child),
     remove: () => removeCmp(cmp),
     update: (newProps) => updateCmp(cmp, newProps),
+    updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
   };
 
   // Create new element
@@ -107,7 +110,15 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   // @TODO: add custom attributes
 
   // Classes
-  // @TODO
+  let classes: string[] = [];
+  if (props?.class && Array.isArray(props?.class)) {
+    classes = props.class;
+  } else if (typeof props?.class === 'string') {
+    classes = props.class.split(' ');
+  }
+  for (let i = 0; i < classes.length; i++) {
+    elem.classList.add(classes[i].trim());
+  }
 
   return elem;
 };
@@ -208,4 +219,41 @@ const updateTemplateCmps = (cmp: TCMP) => {
       cmp.children.push(replaceWithCmp);
     }
   }
+};
+
+const updateCmpClass = (
+  cmp: TCMP,
+  newClass: string | string[],
+  action: TClassAction = 'replace'
+) => {
+  let classes: string[] = [];
+  if (Array.isArray(newClass)) {
+    classes = newClass;
+  } else if (typeof newClass === 'string') {
+    classes = newClass.split(' ');
+  }
+  if (action === 'remove') {
+    for (let i = 0; i < classes.length; i++) {
+      cmp.elem.classList.remove(classes[i].trim());
+    }
+  } else if (action === 'toggle') {
+    for (let i = 0; i < classes.length; i++) {
+      if (cmp.elem.classList.contains(classes[i])) {
+        cmp.elem.classList.remove(classes[i].trim());
+        continue;
+      }
+      cmp.elem.classList.add(classes[i].trim());
+    }
+  } else {
+    if (action === 'replace') cmp.elem.removeAttribute('class');
+    for (let i = 0; i < classes.length; i++) {
+      cmp.elem.classList.add(classes[i].trim());
+    }
+  }
+  if (cmp.props) {
+    cmp.props.class = newClass;
+  } else {
+    cmp.props = { class: newClass };
+  }
+  return cmp;
 };

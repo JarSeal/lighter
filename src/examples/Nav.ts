@@ -1,13 +1,14 @@
 import { CMP } from '../Lighter/CMP';
 
 export const Nav = () => {
-  const getHtml = () => `<ul>
+  const getHtml = () => `<ul class="myClass">
     <li>Home</li>
     <li>Components</li>
     ${CMP({
       tag: 'li',
       text: 'Dynamic CMP in template',
       idAttr: true,
+      class: 'someClass',
       onClick: (cmp) => console.log('DYNAMIC CLICKED!', cmp.id),
     }).html()}
     ${CMP({
@@ -23,7 +24,11 @@ export const Nav = () => {
       tag: 'li',
       text: 'One more dynamic CMP in template',
       idAttr: true,
-      onClick: (cmp) => console.log('DYNAMIC333 CLICKED!', cmp.id),
+      class: ['someClass', 'otherClass'],
+      onClick: (cmp) => {
+        console.log('DYNAMIC333 CLICKED!', cmp.id);
+        cmp.updateClass('someClass', 'toggle');
+      },
     }).html()}
   </ul>`;
 
@@ -31,7 +36,7 @@ export const Nav = () => {
 
   navCmp.add(CMP({ tag: 'li', id: 'different', idAttr: true, text: 'Different' }));
 
-  setTimeout(() => navCmp.update({ html: getHtml() }), 2000);
+  setTimeout(() => navCmp.update({ html: getHtml(), class: 'fsa' }), 2000);
 
   return navCmp;
 };

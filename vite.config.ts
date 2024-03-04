@@ -9,7 +9,7 @@ export default defineConfig({
     },
     lib: {
       entry: './Lighter/index.ts',
-      name: 'lighterts',
+      name: 'lighter',
       fileName: 'index',
     },
     manifest: true,

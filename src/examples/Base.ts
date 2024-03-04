@@ -6,7 +6,8 @@ export const Base = (props: TProps) => {
   baseCmp.add(
     CMP({
       tag: 'button',
-      onClick: (cmp) => console.log('CLICK', cmp.id),
+      onClick: (cmp) => cmp.update({ text: 'clicked', tag: 'button' }),
+      onClickOutside: (cmp) => console.log('UUTSIDAN', cmp),
       onFocus: () => console.log('FOCUS'),
       onBlur: () => console.log('BLUR'),
       text: 'jotein',

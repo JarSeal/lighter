@@ -20,6 +20,7 @@ export const Nav = () => {
         console.log('DYNAMIC22222 CLICKED!', cmp.id);
         cmp.remove();
       },
+      onClickOutside: () => console.log('OUTSIDE'),
     }).html()}
     ${CMP({
       tag: 'li',

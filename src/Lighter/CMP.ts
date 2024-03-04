@@ -19,7 +19,7 @@ export type TProps = {
   class?: string | string[];
   attr?: TAttr | TAttr[];
   onClick?: TListener;
-  // onClickOutside?: TListener;
+  onClickOutside?: TListener;
   onHover?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
@@ -156,8 +156,10 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   } else {
     if (listeners.click || listeners.click === null) delete listeners.click;
   }
+  // Add "outsideClick" listener
+  createOutsideClickListener(cmp);
   if (props?.onHover) {
-    // Add "click" listener
+    // Add "mousemove" listener
     const onHover = props.onHover;
     const fn = (e: Event) => onHover(cmp, e);
     listeners.mousemove = fn;
@@ -166,7 +168,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     if (listeners.mousemove || listeners.mousemove === null) delete listeners.mousemove;
   }
   if (props?.onFocus) {
-    // Add "click" listener
+    // Add "focus" listener
     const onFocus = props.onFocus;
     const fn = (e: Event) => onFocus(cmp, e);
     listeners.focus = fn;
@@ -175,7 +177,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     if (listeners.focus || listeners.focus === null) delete listeners.focus;
   }
   if (props?.onBlur) {
-    // Add "click" listener
+    // Add "blur" listener
     const onBlur = props.onBlur;
     const fn = (e: Event) => onBlur(cmp, e);
     listeners.blur = fn;
@@ -199,6 +201,8 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
       if (nullify) listeners[keys[i]] = null;
     }
   }
+
+  if (cmp.props?.onClickOutside) removeOutsideClickListener(cmp);
 };
 
 const addChild = (parent: TCMP, child: TCMP) => {
@@ -212,12 +216,11 @@ const removeCmp = (cmp: TCMP) => {
   // Check children
   for (let i = 0; i < cmp.children.length; i++) {
     const child = cmp.children[i];
-    const id = child.id;
     child.remove();
-    delete cmps[id];
   }
 
   // Remove elem from dom and cmps
+  removeListeners(cmp, true);
   cmp.elem.remove();
   delete cmps[cmp.id];
 
@@ -331,6 +334,7 @@ const updateCmpClass = (
       cmp.elem.classList.add(classes[i].trim());
     }
   }
+
   return cmp;
 };
 
@@ -405,4 +409,50 @@ const updateCmpText = (cmp: TCMP, newText: string) => {
   }
 
   return cmp;
+};
+
+const onClickOutsideListener: {
+  count: number;
+  fns: { [key: string]: { fn: (e: Event) => void; elem: Element } };
+  mainFn: (e: Event) => void;
+} = {
+  count: 0,
+  fns: {},
+  mainFn: (e: Event) => {
+    const clickedElem = e.target as Element;
+    const fnsKeys = Object.keys(onClickOutsideListener.fns);
+    for (let i = 0; i < fnsKeys.length; i++) {
+      const listener = onClickOutsideListener.fns[fnsKeys[i]];
+      if (!checkMatchingParent(clickedElem, listener.elem)) listener.fn(e);
+    }
+  },
+};
+
+const checkMatchingParent = (elemToCheck: Element | null, elemTarget: Element): boolean => {
+  if (!elemToCheck) return false;
+  if (elemToCheck === elemTarget) return true;
+  return checkMatchingParent(elemToCheck.parentElement, elemTarget);
+};
+
+const createOutsideClickListener = (cmp: TCMP) => {
+  if (!cmp.props?.onClickOutside) {
+    removeOutsideClickListener(cmp);
+    return;
+  }
+  if (onClickOutsideListener.count === 0) {
+    window.removeEventListener('click', onClickOutsideListener.mainFn);
+    window.addEventListener('click', onClickOutsideListener.mainFn);
+  }
+  const onClickOutside = cmp.props.onClickOutside;
+  onClickOutsideListener.fns[cmp.id] = { fn: (e: Event) => onClickOutside(cmp, e), elem: cmp.elem };
+  onClickOutsideListener.count += 1;
+};
+
+const removeOutsideClickListener = (cmp: TCMP) => {
+  if (!onClickOutsideListener.fns[cmp.id]) return;
+  if (onClickOutsideListener.count === 1) {
+    window.removeEventListener('click', onClickOutsideListener.mainFn);
+  }
+  delete onClickOutsideListener.fns[cmp.id];
+  onClickOutsideListener.count -= 1;
 };

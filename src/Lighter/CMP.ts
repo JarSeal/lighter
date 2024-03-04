@@ -104,6 +104,7 @@ const createElem = (cmp: TCMP, props?: TProps) => {
 
   // Attributes
   if (props?.idAttr) elem.setAttribute('id', cmp.id);
+  // @TODO: add custom attributes
 
   // Classes
   // @TODO
@@ -126,6 +127,8 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   } else {
     if (listeners.click || listeners.click === null) delete listeners.click;
   }
+  // @TODO: add rest of onXXX listeners
+  // @TODO: add custom listeners
   return listeners;
 };
 
@@ -137,7 +140,7 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   for (let i = 0; i < keys.length; i++) {
     const listener = listeners[keys[i]];
     if (listener) {
-      cmp.elem.removeEventListener('click', listener, true);
+      cmp.elem.removeEventListener(keys[i], listener, true);
       if (nullify) listeners[keys[i]] = null;
     }
   }

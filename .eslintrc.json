@@ -1,0 +1,30 @@
+{
+  "root": true,
+  "ignorePatterns": ["dist", "node_modules"],
+  "rules": {
+    "no-var": 1,
+    "no-unused-vars": 1,
+    "camelcase": 1,
+    "arrow-body-style": 1,
+    "semi": [2, "always"],
+    "prettier/prettier": ["error", { "endOfLine": "auto" }]
+  },
+  "env": {
+    "commonjs": true,
+    "browser": true,
+    "es6": true,
+    "jest": true
+  },
+  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+  "globals": {
+    "Atomics": "readonly",
+    "SharedArrayBuffer": "readonly"
+  },
+  "plugins": ["prettier", "babel"],
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "requireConfigFile": false,
+    "ecmaVersion": 11,
+    "sourceType": "module"
+  }
+}

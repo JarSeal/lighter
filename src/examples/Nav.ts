@@ -10,6 +10,7 @@ export const Nav = () => {
       idAttr: true,
       class: 'someClass',
       onClick: (cmp) => console.log('DYNAMIC CLICKED!', cmp.id),
+      onHover: () => console.log('HOVER'),
     }).html()}
     ${CMP({
       tag: 'li',
@@ -36,7 +37,6 @@ export const Nav = () => {
         } else {
           cmp.removeAttr(['disabled', 'data-xxx']);
         }
-        console.log(cmp.props?.attr);
       },
     }).html()}
   </ul>`;

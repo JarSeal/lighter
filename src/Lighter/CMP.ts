@@ -12,7 +12,7 @@ export type TAttr = { key: string; value: string };
 export type TProps = {
   id?: string;
   idAttr?: boolean;
-  attach?: HTMLElement;
+  attach?: Element;
   text?: string;
   tag?: string;
   html?: string;
@@ -20,10 +20,10 @@ export type TProps = {
   attr?: TAttr | TAttr[];
   onClick?: TListener;
   // onClickOutside?: TListener;
-  // onHover?: TListener;
-  // onFocus?: TListener;
-  // onBlur?: TListener;
-  // listeners?: { type: string, fn: TListener }[]
+  onHover?: TListener;
+  onFocus?: TListener;
+  onBlur?: TListener;
+  // listeners?: { type: string, fn: TListener, targetElem?: Element }[]
 };
 
 export type TCMP = {
@@ -92,7 +92,7 @@ export const CMP = (props?: TProps): TCMP => {
   cmps[cmp.id] = cmp;
 
   // Check for child <cmp> tags and replace possible tempTemplates
-  updateTemplateCmps(cmp);
+  updateTemplateChildCmps(cmp);
 
   return cmp;
 };
@@ -156,7 +156,33 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   } else {
     if (listeners.click || listeners.click === null) delete listeners.click;
   }
-  // @TODO: add rest of onXXX listeners
+  if (props?.onHover) {
+    // Add "click" listener
+    const onHover = props.onHover;
+    const fn = (e: Event) => onHover(cmp, e);
+    listeners.mousemove = fn;
+    cmp.elem.addEventListener('mousemove', fn, true);
+  } else {
+    if (listeners.mousemove || listeners.mousemove === null) delete listeners.mousemove;
+  }
+  if (props?.onFocus) {
+    // Add "click" listener
+    const onFocus = props.onFocus;
+    const fn = (e: Event) => onFocus(cmp, e);
+    listeners.focus = fn;
+    cmp.elem.addEventListener('focus', fn, true);
+  } else {
+    if (listeners.focus || listeners.focus === null) delete listeners.focus;
+  }
+  if (props?.onBlur) {
+    // Add "click" listener
+    const onBlur = props.onBlur;
+    const fn = (e: Event) => onBlur(cmp, e);
+    listeners.blur = fn;
+    cmp.elem.addEventListener('blur', fn, true);
+  } else {
+    if (listeners.blur || listeners.blur === null) delete listeners.blur;
+  }
   // @TODO: add custom listeners
   return listeners;
 };
@@ -219,11 +245,11 @@ const updateCmp = (cmp: TCMP, newProps?: TProps) => {
   for (let i = 0; i < keepAddedChildren.length; i++) {
     cmp.add(keepAddedChildren[i]);
   }
-  updateTemplateCmps(cmp);
+  updateTemplateChildCmps(cmp);
   return cmp;
 };
 
-const updateTemplateCmps = (cmp: TCMP) => {
+const updateTemplateChildCmps = (cmp: TCMP) => {
   const children = cmp.elem.children;
   for (let i = 0; i < children.length; i++) {
     const id = children[i].getAttribute('id');

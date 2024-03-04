@@ -23,9 +23,9 @@ export type TProps = {
   onHover?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
-  // onCreateCmp?: (cmp) => TCMP;
-  // onUpdateCmp?: (cmp) => TCMP;
-  // onRemoveCmp?: (cmp) => TCMP;
+  onCreateCmp?: (cmp: TCMP) => void;
+  onUpdateCmp?: (cmp: TCMP) => void;
+  onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: { type: string; fn: TListener }[];
 };
 
@@ -96,6 +96,8 @@ export const CMP = (props?: TProps): TCMP => {
 
   // Check for child <cmp> tags and replace possible tempTemplates
   updateTemplateChildCmps(cmp);
+
+  if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
 
   return cmp;
 };
@@ -233,6 +235,8 @@ const removeCmp = (cmp: TCMP) => {
   cmp.elem.remove();
   delete cmps[cmp.id];
 
+  if (cmp.props?.onRemoveCmp) cmp.props.onRemoveCmp(cmp);
+
   return cmp;
 };
 
@@ -258,6 +262,7 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
     cmp.add(keepAddedChildren[i]);
   }
   updateTemplateChildCmps(cmp);
+  if (cmp.props?.onUpdateCmp) cmp.props.onUpdateCmp(cmp);
   if (callback) callback(cmp);
   return cmp;
 };

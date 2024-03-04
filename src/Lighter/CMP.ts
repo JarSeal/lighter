@@ -227,33 +227,65 @@ const updateCmpClass = (
   action: TClassAction = 'replace'
 ) => {
   let classes: string[] = [];
+  let oldClasses: string[] = [];
   if (Array.isArray(newClass)) {
     classes = newClass;
   } else if (typeof newClass === 'string') {
     classes = newClass.split(' ');
   }
+  if (cmp.props?.class && Array.isArray(cmp.props.class)) {
+    oldClasses = cmp.props.class;
+  } else if (typeof cmp.props?.class === 'string') {
+    oldClasses = cmp.props.class.split(' ');
+  }
   if (action === 'remove') {
+    // Remove
     for (let i = 0; i < classes.length; i++) {
+      oldClasses = oldClasses.filter((c) => c !== classes[i].trim());
       cmp.elem.classList.remove(classes[i].trim());
     }
+    if (cmp.props) {
+      cmp.props.class = oldClasses.join(' ').trim();
+    } else {
+      cmp.props = { class: oldClasses.join(' ').trim() };
+    }
   } else if (action === 'toggle') {
+    // Toggle
     for (let i = 0; i < classes.length; i++) {
+      oldClasses = oldClasses.filter((c) => c !== classes[i].trim());
       if (cmp.elem.classList.contains(classes[i])) {
         cmp.elem.classList.remove(classes[i].trim());
         continue;
       }
       cmp.elem.classList.add(classes[i].trim());
+      oldClasses.push(classes[i].trim());
+    }
+    if (cmp.props) {
+      cmp.props.class = oldClasses.join(' ').trim();
+    } else {
+      cmp.props = { class: oldClasses.join(' ').trim() };
     }
   } else {
-    if (action === 'replace') cmp.elem.removeAttribute('class');
+    if (action === 'replace') {
+      // Replace
+      cmp.elem.removeAttribute('class');
+      if (cmp.props) {
+        cmp.props.class = newClass;
+      } else {
+        cmp.props = { class: newClass };
+      }
+    } else {
+      // Add
+      const addedClass = `${oldClasses.join(' ').trim()} ${classes.join(' ')}`.trim();
+      if (cmp.props) {
+        cmp.props.class = addedClass;
+      } else {
+        cmp.props = { class: addedClass };
+      }
+    }
     for (let i = 0; i < classes.length; i++) {
       cmp.elem.classList.add(classes[i].trim());
     }
-  }
-  if (cmp.props) {
-    cmp.props.class = newClass;
-  } else {
-    cmp.props = { class: newClass };
   }
   return cmp;
 };

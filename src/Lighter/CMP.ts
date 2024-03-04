@@ -7,6 +7,8 @@ export type TListener = (cmp: TCMP, e: Event) => void;
 
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
+export type TAttr = { key: string; value: string };
+
 export type TProps = {
   id?: string;
   idAttr?: boolean;
@@ -15,7 +17,7 @@ export type TProps = {
   tag?: string;
   html?: string;
   class?: string | string[];
-  // attr?: string | string[];
+  attr?: TAttr | TAttr[];
   onClick?: TListener;
   // onHover?: TListener;
   // onFocus?: TListener;
@@ -36,8 +38,9 @@ export type TCMP = {
   add: (child: TCMP) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps) => TCMP;
-  // updateAttr: (newAttr: string | string[]) => TCMP;
+  updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
+  removeAttr: (attrKey: string | string[]) => TCMP;
   // updateText: (newText: string) => TCMP;
 };
 
@@ -62,6 +65,8 @@ export const CMP = (props?: TProps): TCMP => {
     remove: () => removeCmp(cmp),
     update: (newProps) => updateCmp(cmp, newProps),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
+    updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
+    removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
   };
 
   // Create new element
@@ -111,13 +116,24 @@ const createElem = (cmp: TCMP, props?: TProps) => {
 
   // Classes
   let classes: string[] = [];
-  if (props?.class && Array.isArray(props?.class)) {
+  if (props?.class && Array.isArray(props.class)) {
     classes = props.class;
   } else if (typeof props?.class === 'string') {
     classes = props.class.split(' ');
   }
   for (let i = 0; i < classes.length; i++) {
     elem.classList.add(classes[i].trim());
+  }
+
+  // Attributes
+  let attributes: TAttr[] = [];
+  if (props?.attr && Array.isArray(props.attr)) {
+    attributes = props.attr;
+  } else if (typeof props?.attr === 'string') {
+    attributes.push(props.attr);
+  }
+  for (let i = 0; i < attributes.length; i++) {
+    elem.setAttribute(attributes[i].key, attributes[i].value);
   }
 
   return elem;
@@ -287,5 +303,15 @@ const updateCmpClass = (
       cmp.elem.classList.add(classes[i].trim());
     }
   }
+  return cmp;
+};
+
+const updateCmpAttr = (cmp: TCMP, newAttr: TAttr | TAttr[]) => {
+  newAttr;
+  return cmp;
+};
+
+const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
+  attrKey;
   return cmp;
 };

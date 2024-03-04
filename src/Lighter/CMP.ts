@@ -9,6 +9,11 @@ export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
 export type TAttr = { key: string; value: string };
 
+let sanitizer: ((html: string) => string) | null = null;
+let sanitizeAll: boolean = false;
+
+export type TSettings = { sanitizer: (html: string) => string; sanitizeAll: boolean };
+
 export type TProps = {
   id?: string;
   idAttr?: boolean;
@@ -16,6 +21,7 @@ export type TProps = {
   text?: string;
   tag?: string;
   html?: string;
+  sanitize?: boolean;
   class?: string | string[];
   attr?: TAttr | TAttr[];
   onClick?: TListener;
@@ -48,13 +54,15 @@ export type TCMP = {
   updateText: (newText: string) => TCMP;
 };
 
-export const CMP = (props?: TProps): TCMP => {
+export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   if (props?.attach && rootCMP) {
     throw new Error('Root node already created');
   }
   if (props?.id && cmps[props.id]) {
     throw new Error(`Id is already in use / taken: ${props.id}`);
   }
+  if (settings?.sanitizer) sanitizer = settings.sanitizer;
+  if (settings?.sanitizeAll) sanitizeAll = settings.sanitizeAll;
 
   // Create cmp object
   const cmp: TCMP = {
@@ -110,7 +118,8 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   // Elem and content
   if (props?.html) {
     const template = document.createElement('template');
-    template.innerHTML = props.html;
+    template.innerHTML =
+      (props.sanitize || sanitizeAll) && sanitizer ? sanitizer(props.html) : props.html;
     elem = template.content.children[0];
   } else {
     elem = document.createElement(props?.tag ? props.tag : 'div');

@@ -19,6 +19,7 @@ export type TProps = {
   class?: string | string[];
   attr?: TAttr | TAttr[];
   onClick?: TListener;
+  // onClickOutside?: TListener;
   // onHover?: TListener;
   // onFocus?: TListener;
   // onBlur?: TListener;
@@ -41,7 +42,7 @@ export type TCMP = {
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
-  // updateText: (newText: string) => TCMP;
+  updateText: (newText: string) => TCMP;
 };
 
 export const CMP = (props?: TProps): TCMP => {
@@ -67,6 +68,7 @@ export const CMP = (props?: TProps): TCMP => {
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
+    updateText: (newText) => updateCmpText(cmp, newText),
   };
 
   // Create new element
@@ -307,11 +309,74 @@ const updateCmpClass = (
 };
 
 const updateCmpAttr = (cmp: TCMP, newAttr: TAttr | TAttr[]) => {
-  newAttr;
+  let attributes: TAttr[] = [];
+  let oldAttributes: TAttr[] = [];
+  if (Array.isArray(newAttr)) {
+    attributes = newAttr;
+  } else {
+    attributes.push(newAttr);
+  }
+  for (let i = 0; i < attributes.length; i++) {
+    cmp.elem.setAttribute(attributes[i].key, attributes[i].value);
+  }
+  const attrProps = cmp.props?.attr || [];
+  if (Array.isArray(attrProps)) {
+    oldAttributes = attrProps;
+  } else {
+    oldAttributes = [attrProps];
+  }
+  oldAttributes = oldAttributes.filter(
+    (attr) => !attributes.find((attr2) => attr.key === attr2.key)
+  );
+  const combinedAttributes = oldAttributes.concat(attributes);
+  if (cmp.props) {
+    cmp.props.attr = combinedAttributes;
+  } else {
+    cmp.props = { attr: combinedAttributes };
+  }
+
   return cmp;
 };
 
 const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
-  attrKey;
+  let attributeKeys: string | string[] = [];
+  let oldAttributes: TAttr[] = [];
+  if (Array.isArray(attrKey)) {
+    attributeKeys = attrKey;
+  } else if (typeof attrKey === 'string') {
+    attributeKeys.push(attrKey);
+  }
+  for (let i = 0; i < attributeKeys.length; i++) {
+    cmp.elem.removeAttribute(attributeKeys[i]);
+  }
+  const attrProps = cmp.props?.attr || [];
+  if (Array.isArray(attrProps)) {
+    oldAttributes = attrProps;
+  } else {
+    oldAttributes = [attrProps];
+  }
+  oldAttributes = oldAttributes.filter((attr) => !attributeKeys.includes(attr.key));
+  if (cmp.props) {
+    cmp.props.attr = oldAttributes;
+  } else {
+    cmp.props = { attr: oldAttributes };
+  }
+
+  return cmp;
+};
+
+const updateCmpText = (cmp: TCMP, newText: string) => {
+  if (!cmp.props?.text && typeof cmp.props?.text !== 'string') {
+    throw new Error(
+      'Cannot update text, CMP is not a text CMP. To change this to a text CMP, use update function.'
+    );
+  }
+  cmp.elem.textContent = newText;
+  if (cmp.props) {
+    cmp.props.text = newText;
+  } else {
+    cmp.props = { text: newText };
+  }
+
   return cmp;
 };

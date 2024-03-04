@@ -28,6 +28,15 @@ export const Nav = () => {
       onClick: (cmp) => {
         console.log('DYNAMIC333 CLICKED!', cmp.id);
         cmp.updateClass('someClass', 'toggle');
+        if (cmp.props?.class?.includes('someClass')) {
+          cmp.updateAttr([
+            { key: 'disabled', value: 'true' },
+            { key: 'data-xxx', value: '23' },
+          ]);
+        } else {
+          cmp.removeAttr(['disabled', 'data-xxx']);
+        }
+        console.log(cmp.props?.attr);
       },
     }).html()}
   </ul>`;

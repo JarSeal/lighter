@@ -14,7 +14,10 @@ export const Nav = () => {
       tag: 'li',
       text: 'Another dynamic CMP in template',
       idAttr: true,
-      onClick: (cmp) => console.log('DYNAMIC22222 CLICKED!', cmp.id),
+      onClick: (cmp) => {
+        console.log('DYNAMIC22222 CLICKED!', cmp.id);
+        cmp.remove();
+      },
     }).html()}
     ${CMP({
       tag: 'li',
@@ -26,7 +29,7 @@ export const Nav = () => {
 
   const navCmp = CMP({ html: getHtml(), id: 'sukka', idAttr: true });
 
-  navCmp.add(CMP({ tag: 'li', text: 'Different' }));
+  navCmp.add(CMP({ tag: 'li', id: 'different', idAttr: true, text: 'Different' }));
 
   setTimeout(() => navCmp.update({ html: getHtml() }), 2000);
 

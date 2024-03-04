@@ -32,7 +32,7 @@ export type TCMP = {
   html: () => string;
   listeners: { [key: string]: ((e: Event) => void) | null };
   add: (child: TCMP) => TCMP;
-  // remove: () => TCMP;
+  remove: () => TCMP;
   update: (newProps?: TProps) => TCMP;
   // updateAttr: (newAttr: string | string[]) => TCMP;
   // updateClass: (newClass: string | string[], replace: boolean) => TCMP;
@@ -57,6 +57,7 @@ export const CMP = (props?: TProps): TCMP => {
     html: () => '',
     listeners: {},
     add: (child) => addChild(cmp, child),
+    remove: () => removeCmp(cmp),
     update: (newProps) => updateCmp(cmp, newProps),
   };
 
@@ -149,6 +150,22 @@ const addChild = (parent: TCMP, child: TCMP) => {
   return child;
 };
 
+const removeCmp = (cmp: TCMP) => {
+  // Check children
+  for (let i = 0; i < cmp.children.length; i++) {
+    const child = cmp.children[i];
+    const id = child.id;
+    child.remove();
+    delete cmps[id];
+  }
+
+  // Remove elem from dom and cmps
+  cmp.elem.remove();
+  delete cmps[cmp.id];
+
+  return cmp;
+};
+
 const updateCmp = (cmp: TCMP, newProps?: TProps) => {
   cmp.props = newProps;
   const elem = createElem(cmp, newProps);
@@ -156,11 +173,21 @@ const updateCmp = (cmp: TCMP, newProps?: TProps) => {
   cmp.elem = elem;
   const listeners = createListeners(cmp, newProps);
   cmp.listeners = listeners;
-  // @TODO: Remove old templateCmps from everywhere
-  // @TODO: Remove children from cmps
+  // Remove old templateCmp children and added children
+  const keepAddedChildren = [];
+  for (let i = 0; i < cmp.children.length; i++) {
+    const child = cmp.children[i];
+    if (!child.isTemplateCmp) {
+      keepAddedChildren.push(child);
+    }
+    child.remove();
+  }
+  cmp.children = [];
+  // Add added children
+  for (let i = 0; i < keepAddedChildren.length; i++) {
+    cmp.add(keepAddedChildren[i]);
+  }
   updateTemplateCmps(cmp);
-  // @TODO: Update children (added with add function)
-  console.log('TADAA', cmp);
   return cmp;
 };
 

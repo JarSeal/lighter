@@ -23,7 +23,10 @@ export type TProps = {
   onHover?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
-  // listeners?: { type: string, fn: TListener, targetElem?: Element }[]
+  // onCreateCmp?: (cmp) => TCMP;
+  // onUpdateCmp?: (cmp) => TCMP;
+  // onRemoveCmp?: (cmp) => TCMP;
+  listeners?: { type: string; fn: TListener }[];
 };
 
 export type TCMP = {
@@ -38,7 +41,7 @@ export type TCMP = {
   listeners: { [key: string]: ((e: Event) => void) | null };
   add: (child: TCMP) => TCMP;
   remove: () => TCMP;
-  update: (newProps?: TProps) => TCMP;
+  update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
@@ -64,7 +67,7 @@ export const CMP = (props?: TProps): TCMP => {
     listeners: {},
     add: (child) => addChild(cmp, child),
     remove: () => removeCmp(cmp),
-    update: (newProps) => updateCmp(cmp, newProps),
+    update: (newProps, callback) => updateCmp(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
@@ -113,8 +116,16 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   if (props?.text) elem.textContent = props?.text;
 
   // Attributes
+  let attributes: TAttr[] = [];
+  if (props?.attr && Array.isArray(props.attr)) {
+    attributes = props.attr;
+  } else if (typeof props?.attr === 'string') {
+    attributes.push(props.attr);
+  }
+  for (let i = 0; i < attributes.length; i++) {
+    elem.setAttribute(attributes[i].key, attributes[i].value);
+  }
   if (props?.idAttr) elem.setAttribute('id', cmp.id);
-  // @TODO: add custom attributes
 
   // Classes
   let classes: string[] = [];
@@ -125,17 +136,6 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   }
   for (let i = 0; i < classes.length; i++) {
     elem.classList.add(classes[i].trim());
-  }
-
-  // Attributes
-  let attributes: TAttr[] = [];
-  if (props?.attr && Array.isArray(props.attr)) {
-    attributes = props.attr;
-  } else if (typeof props?.attr === 'string') {
-    attributes.push(props.attr);
-  }
-  for (let i = 0; i < attributes.length; i++) {
-    elem.setAttribute(attributes[i].key, attributes[i].value);
   }
 
   return elem;
@@ -185,7 +185,16 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   } else {
     if (listeners.blur || listeners.blur === null) delete listeners.blur;
   }
-  // @TODO: add custom listeners
+  if (props?.listeners) {
+    // Add custom listeners
+    for (let i = 0; i < props.listeners.length; i++) {
+      const listenerFn = props.listeners[i].fn;
+      const fn = (e: Event) => listenerFn(cmp, e);
+      const type = props.listeners[i].type;
+      listeners[type] = fn;
+      cmp.elem.addEventListener(type, fn, true);
+    }
+  }
   return listeners;
 };
 
@@ -227,7 +236,7 @@ const removeCmp = (cmp: TCMP) => {
   return cmp;
 };
 
-const updateCmp = (cmp: TCMP, newProps?: TProps) => {
+const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void) => {
   cmp.props = newProps;
   const elem = createElem(cmp, newProps);
   cmp.elem.replaceWith(elem);
@@ -249,6 +258,7 @@ const updateCmp = (cmp: TCMP, newProps?: TProps) => {
     cmp.add(keepAddedChildren[i]);
   }
   updateTemplateChildCmps(cmp);
+  if (callback) callback(cmp);
   return cmp;
 };
 
@@ -398,7 +408,7 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
 const updateCmpText = (cmp: TCMP, newText: string) => {
   if (!cmp.props?.text && typeof cmp.props?.text !== 'string') {
     throw new Error(
-      'Cannot update text, CMP is not a text CMP. To change this to a text CMP, use update function.'
+      'Cannot update text, CMP is not a text CMP. To change this to a text CMP, use the "cmp.update({ text })" function instead.'
     );
   }
   cmp.elem.textContent = newText;

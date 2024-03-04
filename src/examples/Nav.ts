@@ -28,7 +28,7 @@ export const Nav = () => {
       idAttr: true,
       class: ['someClass', 'otherClass'],
       onClick: (cmp) => {
-        console.log('DYNAMIC333 CLICKED!', cmp.id);
+        console.log('DYNAMIC333 CLICKED!', cmp.props);
         cmp.updateClass('someClass', 'toggle');
         if (cmp.props?.class?.includes('someClass')) {
           cmp.updateAttr([
@@ -39,6 +39,7 @@ export const Nav = () => {
           cmp.removeAttr(['disabled', 'data-xxx']);
         }
       },
+      listeners: [{ type: 'mousedown', fn: () => console.log('MOUSDOWN') }],
     }).html()}
   </ul>`;
 

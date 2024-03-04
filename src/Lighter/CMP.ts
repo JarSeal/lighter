@@ -1,52 +1,72 @@
 import { v4 as uuidv4 } from 'uuid';
 
-let rootCMP;
+let rootCMP: TCMP | null = null;
+const cmps: { [key: string]: TCMP } = {};
 
-export type TCMPProps = {
+export type TListener = (cmp: TCMP, e: Event) => void;
+
+export type TProps = {
+  id?: string;
+  idAttr?: boolean;
   attach?: HTMLElement;
   text?: string;
   tag?: string;
   html?: string;
-  onClick?: (e: Event, cmp: TCMP) => void;
+  // class?: string | string[];
+  // attr?: string | string[];
+  onClick?: TListener;
+  // onHover?: TListener;
+  // onFocus?: TListener;
+  // onBlur?: TListener;
+  // listeners?: { type: string, fn: TListener }[]
 };
 
 export type TCMP = {
   id: string;
   children: TCMP[];
-  props: TCMPProps;
-  elem: HTMLElement;
-  parentElem: HTMLElement;
-  isCMP: boolean;
-  listeners: { [key: string]: { fn: (e: Event, cmp: TCMP) => void; remove: () => void } };
+  props?: TProps;
+  elem: Element;
+  parentElem: Element | null;
+  isTemplateCmp?: boolean;
+  isRoot?: boolean;
+  html: () => string;
+  listeners: { [key: string]: ((e: Event) => void) | null };
   add: (child: TCMP) => TCMP;
-  update: (newProps: TCMPProps) => TCMP;
+  // remove: () => TCMP;
+  update: (newProps?: TProps) => TCMP;
+  // updateAttr: (newAttr: string | string[]) => TCMP;
+  // updateClass: (newClass: string | string[], replace: boolean) => TCMP;
+  // updateText: (newText: string) => TCMP;
 };
 
-export const CMP = (props?: TCMPProps): TCMP => {
+export const CMP = (props?: TProps): TCMP => {
   if (props?.attach && rootCMP) {
     throw new Error('Root node already created');
   }
-
-  let cmp: TCMP;
-
-  // Create new element
-  const elem = createElem(props);
+  if (props?.id && cmps[props.id]) {
+    throw new Error(`Id is already in use / taken: ${props.id}`);
+  }
 
   // Create cmp object
-  cmp = {
-    isCMP: true,
-    id: uuidv4(),
+  const cmp: TCMP = {
+    id: props?.id || uuidv4(),
     children: [],
     props,
-    elem,
+    elem: null as unknown as Element,
     parentElem: null,
-    listeners: emptyListeners,
+    html: () => '',
+    listeners: {},
     add: (child) => addChild(cmp, child),
     update: (newProps) => updateCmp(cmp, newProps),
   };
 
+  // Create new element
+  const elem = createElem(cmp, props);
+  cmp.elem = elem;
+  cmp.html = () => getTempTemplate(cmp.id);
+
   // Create possible listeners
-  const listeners = createListeners(props, cmp);
+  const listeners = createListeners(cmp, props);
   cmp.listeners = listeners;
 
   // Check if props have attach and attach to element
@@ -54,13 +74,24 @@ export const CMP = (props?: TCMPProps): TCMP => {
     props.attach.appendChild(elem);
     rootCMP = cmp;
     cmp.parentElem = props.attach;
+    cmp.isRoot = true;
   }
+
+  // Add cmp to list
+  cmps[cmp.id] = cmp;
+
+  // Check for child <cmp> tags and replace possible tempTemplates
+  updateTemplateCmps(cmp);
 
   return cmp;
 };
 
-const createElem = (props: TCMPProps) => {
+const getTempTemplate = (id: string) => `<cmp id="${id}"></cmp>`;
+
+const createElem = (cmp: TCMP, props?: TProps) => {
   let elem;
+
+  // Elem and content
   if (props?.html) {
     const template = document.createElement('template');
     template.innerHTML = props.html;
@@ -69,25 +100,46 @@ const createElem = (props: TCMPProps) => {
     elem = document.createElement(props?.tag ? props.tag : 'div');
   }
   if (props?.text) elem.textContent = props?.text;
+
+  // Attributes
+  if (props?.idAttr) elem.setAttribute('id', cmp.id);
+
+  // Classes
+  // @TODO
+
   return elem;
 };
 
-const emptyListeners = { click: { fn: null, remove: null } };
+const createListeners = (cmp: TCMP, props?: TProps) => {
+  // Remove possiple listeners
+  removeListeners(cmp);
 
-const createListeners = (props: TCMPProps, cmp: TCMP) => {
   const listeners = cmp.listeners;
+
   if (props?.onClick) {
-    if (listeners.click.remove) listeners.click.remove();
-    const fn = (e: Event) => props.onClick(e, cmp);
-    listeners.click.fn = fn;
-    listeners.click.remove = () => {
-      cmp.elem.removeEventListener('click', fn, true);
-      listeners.click.fn = null;
-      listeners.click.remove = null;
-    };
+    // Add "click" listener
+    const onClick = props.onClick;
+    const fn = (e: Event) => onClick(cmp, e);
+    listeners.click = fn;
     cmp.elem.addEventListener('click', fn, true);
+  } else {
+    if (listeners.click || listeners.click === null) delete listeners.click;
   }
   return listeners;
+};
+
+const removeListeners = (cmp: TCMP, nullify?: boolean) => {
+  const listeners = cmp.listeners;
+  const keys = Object.keys(listeners);
+
+  // Remove possiple listeners
+  for (let i = 0; i < keys.length; i++) {
+    const listener = listeners[keys[i]];
+    if (listener) {
+      cmp.elem.removeEventListener('click', listener, true);
+      if (nullify) listeners[keys[i]] = null;
+    }
+  }
 };
 
 const addChild = (parent: TCMP, child: TCMP) => {
@@ -97,12 +149,33 @@ const addChild = (parent: TCMP, child: TCMP) => {
   return child;
 };
 
-const updateCmp = (cmp: TCMP, newProps: TCMPProps) => {
+const updateCmp = (cmp: TCMP, newProps?: TProps) => {
   cmp.props = newProps;
-  const elem = createElem(newProps);
+  const elem = createElem(cmp, newProps);
   cmp.elem.replaceWith(elem);
   cmp.elem = elem;
-  const listeners = createListeners(newProps, cmp);
+  const listeners = createListeners(cmp, newProps);
   cmp.listeners = listeners;
+  // @TODO: Remove old templateCmps from everywhere
+  // @TODO: Remove children from cmps
+  updateTemplateCmps(cmp);
+  // @TODO: Update children (added with add function)
+  console.log('TADAA', cmp);
   return cmp;
+};
+
+const updateTemplateCmps = (cmp: TCMP) => {
+  const children = cmp.elem.children;
+  for (let i = 0; i < children.length; i++) {
+    const id = children[i].getAttribute('id');
+    if (id && children[i].outerHTML === getTempTemplate(id)) {
+      const replaceWithCmp = cmps[id];
+      if (!replaceWithCmp)
+        throw new Error(`The replaceWithCmp not found in cmps list (in parent cmp: ${cmp.id})`);
+      children[i].replaceWith(replaceWithCmp.elem);
+      replaceWithCmp.isTemplateCmp = true;
+      replaceWithCmp.parentElem = cmp.elem;
+      cmp.children.push(replaceWithCmp);
+    }
+  }
 };

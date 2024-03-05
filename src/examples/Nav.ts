@@ -8,8 +8,16 @@ export const Nav = () => {
       tag: 'li',
       text: 'Dynamic CMP in template',
       idAttr: true,
+      style: { color: 'lime' },
       class: 'someClass',
-      onClick: (cmp) => console.log('DYNAMIC CLICKED!', cmp.id),
+      onClick: (cmp) => {
+        console.log('DYNAMIC CLICKED!', cmp.id);
+        if (cmp.elem.style.color === 'red') {
+          cmp.updateStyle({ color: 'blue' });
+        } else {
+          cmp.updateStyle({ color: 'red' });
+        }
+      },
     })}
     ${CMPTemplate({
       tag: 'li',

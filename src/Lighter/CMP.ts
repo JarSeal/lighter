@@ -7,6 +7,8 @@ export type TListener = (cmp: TCMP, e: Event) => void;
 
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
+export type TStyle = { [key: string]: string | number | null };
+
 export type TAttr = { key: string; value: string };
 
 export type TSettings = { sanitizer: (html: string) => string; sanitizeAll: boolean };
@@ -14,14 +16,16 @@ export type TSettings = { sanitizer: (html: string) => string; sanitizeAll: bool
 export type TProps = {
   id?: string;
   idAttr?: boolean;
-  attach?: Element;
+  attach?: HTMLElement;
   text?: string;
   tag?: string;
   html?: string;
   sanitize?: boolean;
   class?: string | string[];
+  // animClass?: { newClass: string | string[]; length: number; delay?: number; gotoIndex?: number; action?: TClassAction }[];
   attr?: TAttr | TAttr[];
-  // style?: { [key: string]: string | number };
+  style?: TStyle;
+  // animStyle?: { newStyle: TStyle; length: number; delay?: number; gotoIndex?: number; }[];
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
@@ -37,21 +41,27 @@ export type TCMP = {
   id: string;
   children: TCMP[];
   props?: TProps;
-  elem: Element;
-  parentElem: Element | null;
+  elem: HTMLElement;
+  parentElem: HTMLElement | null;
   isTemplateCmp?: boolean;
   isRoot?: boolean;
   isCmp: boolean;
   html: () => string;
   listeners: { [key: string]: ((e: Event) => void) | null };
+  // timeouts: { [key: string]: (cmp: TCMP) => void };
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
+  // updateAnimClass: (
+  //   animChain: { newClass: string | string[]; length: number; delay?: number; gotoIndex?: number; action?: TClassAction }[]
+  // ) => TCMP;
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
-  // updateStyle: (newStyle: { [key: string]: string | number }) => TCMP;
-  // removeStyle: (styleKey: string | string[]) => TCMP;
+  updateStyle: (newStyle: TStyle) => TCMP;
+  // updateAnimStyle: (
+  //   animChain: { newStyle: TStyle; length: number; delay?: number; gotoIndex?: number; }[]
+  // ) => TCMP;
   updateText: (newText: string) => TCMP;
 };
 
@@ -73,7 +83,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     id: props?.id || uuidv4(),
     children: [],
     props,
-    elem: null as unknown as Element,
+    elem: null as unknown as HTMLElement,
     parentElem: null,
     isCmp: true,
     html: () => '',
@@ -84,6 +94,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
+    updateStyle: (newStyle: TStyle) => updateCmpStyle(cmp, newStyle),
     updateText: (newText) => updateCmpText(cmp, newText),
   };
 
@@ -132,9 +143,9 @@ const createElem = (cmp: TCMP, props?: TProps) => {
     const template = document.createElement('template');
     template.innerHTML =
       (props.sanitize || sanitizeAll) && sanitizer ? sanitizer(props.html) : props.html;
-    elem = template.content.children[0];
+    elem = template.content.children[0] as HTMLElement;
   } else {
-    elem = document.createElement(props?.tag ? props.tag : 'div');
+    elem = document.createElement(props?.tag ? props.tag : 'div') as HTMLElement;
   }
   if (props?.text) elem.textContent = props?.text;
 
@@ -159,6 +170,17 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   }
   for (let i = 0; i < classes.length; i++) {
     elem.classList.add(classes[i].trim());
+  }
+
+  // Styles
+  if (props?.style) {
+    const styleProps = Object.keys(props.style);
+    for (let i = 0; i < styleProps.length; i++) {
+      elem.style.setProperty(
+        styleProps[i],
+        props.style[styleProps[i]] === null ? null : String(props.style[styleProps[i]])
+      );
+    }
   }
 
   return elem;
@@ -437,6 +459,19 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
   return cmp;
 };
 
+const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
+  const styleProps = Object.keys(newStyle);
+  const elem = cmp.elem as HTMLElement;
+  for (let i = 0; i < styleProps.length; i++) {
+    elem.style.setProperty(
+      styleProps[i],
+      newStyle[styleProps[i]] === null ? null : String(newStyle[styleProps[i]])
+    );
+  }
+
+  return cmp;
+};
+
 const updateCmpText = (cmp: TCMP, newText: string) => {
   if (!cmp.props?.text && typeof cmp.props?.text !== 'string') {
     throw new Error(
@@ -455,13 +490,13 @@ const updateCmpText = (cmp: TCMP, newText: string) => {
 
 const onClickOutsideListener: {
   count: number;
-  fns: { [key: string]: { fn: (e: Event) => void; elem: Element } };
+  fns: { [key: string]: { fn: (e: Event) => void; elem: HTMLElement } };
   mainFn: (e: Event) => void;
 } = {
   count: 0,
   fns: {},
   mainFn: (e: Event) => {
-    const clickedElem = e.target as Element;
+    const clickedElem = e.target as HTMLElement;
     const fnsKeys = Object.keys(onClickOutsideListener.fns);
     for (let i = 0; i < fnsKeys.length; i++) {
       const listener = onClickOutsideListener.fns[fnsKeys[i]];
@@ -470,7 +505,7 @@ const onClickOutsideListener: {
   },
 };
 
-const checkMatchingParent = (elemToCheck: Element | null, elemTarget: Element): boolean => {
+const checkMatchingParent = (elemToCheck: HTMLElement | null, elemTarget: HTMLElement): boolean => {
   if (!elemToCheck) return false;
   if (elemToCheck === elemTarget) return true;
   return checkMatchingParent(elemToCheck.parentElement, elemTarget);

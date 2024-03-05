@@ -17,7 +17,7 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "dev": "vite serve --port 8080",
+    "dev": "vite serve --port 8080 --host",
     "lint": "eslint . --ext .ts",
     "test": "jest --verbose --runInBand --detectOpenHandles",
     "build": "tsc && vite build",

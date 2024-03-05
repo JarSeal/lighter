@@ -8,24 +8,23 @@ export const Nav = () => {
       tag: 'li',
       text: 'Change class',
       animClass: [
-        { newClass: 'start', duration: 2000, action: 'replace' },
-        { newClass: 'middle', duration: 2000, action: 'add' },
-        { newClass: 'end', duration: 2000, action: 'replace', gotoIndex: 0 },
+        { class: 'start', duration: 2000, action: 'replace' },
+        { class: 'middle', duration: 2000, action: 'add' },
+        { class: 'end', duration: 2000, action: 'replace', gotoIndex: 0 },
       ],
     })}
     ${CMPTemplate({
       tag: 'li',
       text: 'Change color',
       animStyle: [
-        { newStyle: { color: 'orange' }, duration: 2000 },
-        { newStyle: { color: 'red' }, duration: 2000, gotoIndex: 0 },
+        { style: { color: 'orange' }, duration: 2000 },
+        { style: { color: 'red' }, duration: 2000, gotoIndex: 0 },
       ],
-      style: { transition: 'color 2s linear' },
+      style: { transition: 'color 0.7s linear' },
       onClick: (cmp) => {
-        // cmp.remove()
         cmp.updateAnimStyle([
-          { newStyle: { color: 'lime' }, duration: 2000 },
-          { newStyle: { color: 'blue' }, duration: 2000, gotoIndex: 0 },
+          { style: { color: 'lime' }, duration: 2000 },
+          { style: { color: 'blue' }, duration: 2000, gotoIndex: 0 },
         ]);
       },
     })}
@@ -85,7 +84,15 @@ export const Nav = () => {
 
   navCmp.add({ tag: 'li', id: 'different', idAttr: true, text: 'Different' });
 
-  // setTimeout(() => navCmp.update({ html: getHtml(), class: 'fsa' }), 2000);
+  setTimeout(
+    () =>
+      navCmp.updateAnimClass([
+        { class: 'start', duration: 1000 },
+        { class: 'middle', duration: 2000, action: 'add' },
+        { class: 'END', duration: 3000 },
+      ]),
+    2000
+  );
 
   return navCmp;
 };

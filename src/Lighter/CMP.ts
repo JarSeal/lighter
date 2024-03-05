@@ -7,7 +7,20 @@ export type TListener = (cmp: TCMP, e: Event) => void;
 
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
+export type TAnimClass = {
+  class: string | string[];
+  duration: number;
+  gotoIndex?: number;
+  action?: TClassAction;
+};
+
 export type TStyle = { [key: string]: string | number | null };
+
+export type TAnimStyle = {
+  style: TStyle;
+  duration: number;
+  gotoIndex?: number;
+};
 
 export type TAttr = { key: string; value: string };
 
@@ -22,20 +35,17 @@ export type TProps = {
   html?: string | ((cmp: TCMP) => string);
   sanitize?: boolean;
   class?: string | string[];
-  animClass?: {
-    newClass: string | string[];
-    duration: number;
-    gotoIndex?: number;
-    action?: TClassAction;
-  }[];
+  animClass?: TAnimClass[];
   attr?: TAttr | TAttr[];
   style?: TStyle;
-  animStyle?: { newStyle: TStyle; duration: number; gotoIndex?: number }[];
+  animStyle?: { style: TStyle; duration: number; gotoIndex?: number }[];
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
+  // onInput?: TListener;
+  // onChange?: TListener;
   onCreateCmp?: (cmp: TCMP) => void;
   onUpdateCmp?: (cmp: TCMP) => void;
   onRemoveCmp?: (cmp: TCMP) => void;
@@ -58,15 +68,11 @@ export type TCMP = {
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
-  // updateAnimClass: (
-  //   animChain: { newClass: string | string[]; duration: number; gotoIndex?: number; action?: TClassAction }[]
-  // ) => TCMP;
+  updateAnimClass: (animChain: TAnimClass[]) => TCMP;
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
   updateStyle: (newStyle: TStyle) => TCMP;
-  updateAnimStyle: (
-    animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]
-  ) => TCMP;
+  updateAnimStyle: (animChain: TAnimStyle[]) => TCMP;
   updateText: (newText: string) => TCMP;
 };
 
@@ -98,11 +104,11 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     remove: () => removeCmp(cmp),
     update: (newProps, callback) => updateCmp(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
+    updateAnimClass: (animChain: TAnimClass[]) => updateCmpAnimClass(cmp, animChain),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
     updateStyle: (newStyle: TStyle) => updateCmpStyle(cmp, newStyle),
-    updateAnimStyle: (animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]) =>
-      updateCmpAnimStyle(cmp, animChain),
+    updateAnimStyle: (animChain: TAnimStyle[]) => updateCmpAnimStyle(cmp, animChain),
     updateText: (newText) => updateCmpText(cmp, newText),
   };
 
@@ -449,6 +455,18 @@ const updateCmpAttr = (cmp: TCMP, newAttr: TAttr | TAttr[]) => {
   return cmp;
 };
 
+const updateCmpAnimClass = (cmp: TCMP, animChain: TAnimClass[]) => {
+  removeAnim(cmp, 'animClass');
+  if (cmp.props) {
+    cmp.props.animClass = animChain;
+  } else {
+    cmp.props = { animClass: animChain };
+  }
+  runAnimClass(cmp);
+
+  return cmp;
+};
+
 const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
   let attributeKeys: string | string[] = [];
   let oldAttributes: TAttr[] = [];
@@ -489,10 +507,7 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
   return cmp;
 };
 
-const updateCmpAnimStyle = (
-  cmp: TCMP,
-  animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]
-) => {
+const updateCmpAnimStyle = (cmp: TCMP, animChain: TAnimStyle[]) => {
   removeAnim(cmp, 'animStyle');
   if (cmp.props) {
     cmp.props.animStyle = animChain;
@@ -579,7 +594,7 @@ const runAnimClass = (cmp: TCMP) => {
       const curIndex = cmp.timers.animClass.curIndex;
       const curAnim = classAnims[curIndex];
       if (curIndex >= classAnims.length) return;
-      updateCmpClass(cmp, curAnim.newClass, curAnim.action);
+      updateCmpClass(cmp, curAnim.class, curAnim.action);
       cmp.timers.animClass.fn = setTimeout(styleTimerFn, curAnim.duration);
       if (curAnim.gotoIndex !== undefined) {
         cmp.timers.animClass.curIndex = curAnim.gotoIndex as number;
@@ -599,12 +614,12 @@ const runAnimStyle = (cmp: TCMP) => {
       const curIndex = cmp.timers.animStyle.curIndex;
       const curAnim = styleAnims[curIndex];
       if (curIndex >= styleAnims.length) return;
-      const styleProps = Object.keys(curAnim.newStyle);
+      const styleProps = Object.keys(curAnim.style);
       const elem = cmp.elem;
       for (let i = 0; i < styleProps.length; i++) {
         elem.style.setProperty(
           styleProps[i],
-          curAnim.newStyle[styleProps[i]] === null ? null : String(curAnim.newStyle[styleProps[i]])
+          curAnim.style[styleProps[i]] === null ? null : String(curAnim.style[styleProps[i]])
         );
       }
       cmp.timers.animStyle.fn = setTimeout(styleTimerFn, curAnim.duration);
@@ -619,7 +634,7 @@ const runAnimStyle = (cmp: TCMP) => {
 };
 
 const removeAnim = (cmp: TCMP, animKey: string) => {
-  clearTimeout(cmp.timers[animKey].fn as NodeJS.Timeout);
+  clearTimeout(cmp.timers[animKey]?.fn as NodeJS.Timeout | undefined);
   delete cmp.timers[animKey];
 };
 

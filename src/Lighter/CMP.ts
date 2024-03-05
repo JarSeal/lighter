@@ -19,7 +19,7 @@ export type TProps = {
   attach?: HTMLElement;
   text?: string;
   tag?: string;
-  html?: string; //  | ((parentCmp: TCMP) => string)
+  html?: string | ((cmp: TCMP) => string);
   sanitize?: boolean;
   class?: string | string[];
   animClass?: {
@@ -150,8 +150,9 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   // Elem and content
   if (props?.html) {
     const template = document.createElement('template');
+    const rawHtml = typeof props.html === 'string' ? props.html : props.html(cmp);
     template.innerHTML =
-      (props.sanitize || sanitizeAll) && sanitizer ? sanitizer(props.html) : props.html;
+      (props.sanitize || sanitizeAll) && sanitizer ? sanitizer(rawHtml) : rawHtml;
     elem = template.content.children[0] as HTMLElement;
   } else {
     elem = document.createElement(props?.tag ? props.tag : 'div') as HTMLElement;

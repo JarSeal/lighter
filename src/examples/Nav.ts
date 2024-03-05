@@ -81,7 +81,7 @@ export const Nav = () => {
     </li>
   </ul>`;
 
-  const navCmp = CMP({ html: getHtml(), id: 'sukka', idAttr: true });
+  const navCmp = CMP({ html: getHtml, id: 'sukka', idAttr: true });
 
   navCmp.add({ tag: 'li', id: 'different', idAttr: true, text: 'Different' });
 

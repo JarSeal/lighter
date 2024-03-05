@@ -9,9 +9,6 @@ export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
 export type TAttr = { key: string; value: string };
 
-let sanitizer: ((html: string) => string) | null = null;
-let sanitizeAll: boolean = false;
-
 export type TSettings = { sanitizer: (html: string) => string; sanitizeAll: boolean };
 
 export type TProps = {
@@ -24,6 +21,7 @@ export type TProps = {
   sanitize?: boolean;
   class?: string | string[];
   attr?: TAttr | TAttr[];
+  // style?: { [key: string]: string | number };
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
@@ -49,11 +47,16 @@ export type TCMP = {
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
-  updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
+  updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
+  // updateStyle: (newStyle: { [key: string]: string | number }) => TCMP;
+  // removeStyle: (styleKey: string | string[]) => TCMP;
   updateText: (newText: string) => TCMP;
 };
+
+let sanitizer: ((html: string) => string) | null = null;
+let sanitizeAll: boolean = false;
 
 export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   if (props?.attach && rootCMP) {
@@ -116,6 +119,8 @@ export const CMPTemplate = (props?: TProps) => {
   const cmp = CMP(props);
   return cmp.html();
 };
+
+export const getCmpById = (id: string) => cmps[id];
 
 const getTempTemplate = (id: string) => `<cmp id="${id}"></cmp>`;
 

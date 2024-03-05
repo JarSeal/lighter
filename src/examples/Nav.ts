@@ -5,6 +5,16 @@ export const Nav = () => {
     <li>Home</li>
     <li>Components</li>
     ${CMPTemplate({
+      tag: 'li',
+      text: 'Change class',
+      animClass: [
+        { newClass: 'start', duration: 2000, action: 'replace' },
+        { newClass: 'middle', duration: 2000, action: 'add' },
+        { newClass: 'end', duration: 2000, action: 'replace', gotoIndex: 0 },
+      ],
+    })}
+    ${CMPTemplate({
+      tag: 'li',
       text: 'Change color',
       animStyle: [
         { newStyle: { color: 'orange' }, duration: 2000 },

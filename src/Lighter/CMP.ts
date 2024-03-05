@@ -22,7 +22,12 @@ export type TProps = {
   html?: string;
   sanitize?: boolean;
   class?: string | string[];
-  // animClass?: { newClass: string | string[]; duration: number; gotoIndex?: number; action?: TClassAction }[];
+  animClass?: {
+    newClass: string | string[];
+    duration: number;
+    gotoIndex?: number;
+    action?: TClassAction;
+  }[];
   attr?: TAttr | TAttr[];
   style?: TStyle;
   animStyle?: { newStyle: TStyle; duration: number; gotoIndex?: number }[];
@@ -487,13 +492,13 @@ const updateCmpAnimStyle = (
   cmp: TCMP,
   animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]
 ) => {
-  clearTimeout(cmp.timers.animStyle.fn as NodeJS.Timeout);
+  removeAnim(cmp, 'animStyle');
   if (cmp.props) {
     cmp.props.animStyle = animChain;
   } else {
     cmp.props = { animStyle: animChain };
   }
-  runStyleAnim(cmp);
+  runAnimStyle(cmp);
 
   return cmp;
 };
@@ -561,10 +566,31 @@ const removeOutsideClickListener = (cmp: TCMP) => {
 };
 
 const runAnims = (cmp: TCMP) => {
-  runStyleAnim(cmp);
+  runAnimClass(cmp);
+  runAnimStyle(cmp);
 };
 
-const runStyleAnim = (cmp: TCMP) => {
+const runAnimClass = (cmp: TCMP) => {
+  const classAnims = cmp.props?.animClass;
+  if (classAnims?.length) {
+    cmp.timers.animClass = { fn: null, curIndex: 0 };
+    const styleTimerFn = () => {
+      const curIndex = cmp.timers.animClass.curIndex;
+      const curAnim = classAnims[curIndex];
+      if (curIndex >= classAnims.length) return;
+      updateCmpClass(cmp, curAnim.newClass, curAnim.action);
+      cmp.timers.animClass.fn = setTimeout(styleTimerFn, curAnim.duration);
+      if (curAnim.gotoIndex !== undefined) {
+        cmp.timers.animClass.curIndex = curAnim.gotoIndex as number;
+        return;
+      }
+      cmp.timers.animClass.curIndex++;
+    };
+    styleTimerFn();
+  }
+};
+
+const runAnimStyle = (cmp: TCMP) => {
   const styleAnims = cmp.props?.animStyle;
   if (styleAnims?.length) {
     cmp.timers.animStyle = { fn: null, curIndex: 0 };
@@ -591,9 +617,14 @@ const runStyleAnim = (cmp: TCMP) => {
   }
 };
 
+const removeAnim = (cmp: TCMP, animKey: string) => {
+  clearTimeout(cmp.timers[animKey].fn as NodeJS.Timeout);
+  delete cmp.timers[animKey];
+};
+
 const removeAnims = (cmp: TCMP) => {
   const timerKeys = Object.keys(cmp.timers);
   for (let i = 0; i < timerKeys.length; i++) {
-    clearTimeout(cmp.timers[timerKeys[i]].fn as NodeJS.Timeout);
+    removeAnim(cmp, timerKeys[i]);
   }
 };

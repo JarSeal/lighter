@@ -1,18 +1,17 @@
-import { CMP } from '../Lighter/CMP';
+import { CMP, CMPTemplate } from '../Lighter/CMP';
 
 export const Nav = () => {
   const getHtml = () => `<ul class="myClass">
     <li>Home</li>
     <li>Components</li>
-    ${CMP({
+    ${CMPTemplate({
       tag: 'li',
       text: 'Dynamic CMP in template',
       idAttr: true,
       class: 'someClass',
       onClick: (cmp) => console.log('DYNAMIC CLICKED!', cmp.id),
-      onHover: () => console.log('HOVER'),
-    }).html()}
-    ${CMP({
+    })}
+    ${CMPTemplate({
       tag: 'li',
       text: 'Another dynamic CMP in template',
       idAttr: true,
@@ -20,9 +19,8 @@ export const Nav = () => {
         console.log('DYNAMIC22222 CLICKED!', cmp.id);
         cmp.remove();
       },
-      onClickOutside: () => console.log('OUTSIDE'),
-    }).html()}
-    ${CMP({
+    })}
+    ${CMPTemplate({
       tag: 'li',
       text: 'One more dynamic CMP in template',
       idAttr: true,
@@ -39,13 +37,13 @@ export const Nav = () => {
           cmp.removeAttr(['disabled', 'data-xxx']);
         }
       },
-      listeners: [{ type: 'mousedown', fn: () => console.log('MOUSDOWN') }],
-    }).html()}
+      listeners: [{ type: 'mousedown', fn: () => console.log('MOUSEDOWN') }],
+    })}
   </ul>`;
 
   const navCmp = CMP({ html: getHtml(), id: 'sukka', idAttr: true });
 
-  navCmp.add(CMP({ tag: 'li', id: 'different', idAttr: true, text: 'Different' }));
+  navCmp.add({ tag: 'li', id: 'different', idAttr: true, text: 'Different' });
 
   setTimeout(() => navCmp.update({ html: getHtml(), class: 'fsa' }), 2000);
 

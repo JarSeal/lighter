@@ -43,9 +43,10 @@ export type TCMP = {
   parentElem: Element | null;
   isTemplateCmp?: boolean;
   isRoot?: boolean;
+  isCmp: boolean;
   html: () => string;
   listeners: { [key: string]: ((e: Event) => void) | null };
-  add: (child: TCMP) => TCMP;
+  add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
@@ -71,6 +72,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     props,
     elem: null as unknown as Element,
     parentElem: null,
+    isCmp: true,
     html: () => '',
     listeners: {},
     add: (child) => addChild(cmp, child),
@@ -108,6 +110,11 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
 
   return cmp;
+};
+
+export const CMPTemplate = (props?: TProps) => {
+  const cmp = CMP(props);
+  return cmp.html();
 };
 
 const getTempTemplate = (id: string) => `<cmp id="${id}"></cmp>`;
@@ -225,7 +232,13 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   if (cmp.props?.onClickOutside) removeOutsideClickListener(cmp);
 };
 
-const addChild = (parent: TCMP, child: TCMP) => {
+const addChild = (parent: TCMP, child?: TCMP | TProps) => {
+  if (!child) {
+    child = CMP();
+  } else if (!('isCmp' in child)) {
+    child = CMP(child);
+  }
+
   parent.children.push(child);
   parent.elem.appendChild(child.elem);
   child.parentElem = parent.elem;

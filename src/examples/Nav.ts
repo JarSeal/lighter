@@ -72,6 +72,13 @@ export const Nav = () => {
       },
       listeners: [{ type: 'mousedown', fn: () => console.log('MOUSEDOWN') }],
     })}
+    <li>
+      <div>${CMPTemplate({
+        tag: 'span',
+        text: 'Deeper in hierarchy',
+        onClick: () => console.log('DEEP'),
+      })}</div>
+    </li>
   </ul>`;
 
   const navCmp = CMP({ html: getHtml(), id: 'sukka', idAttr: true });

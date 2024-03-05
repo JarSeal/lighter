@@ -19,7 +19,7 @@ export type TProps = {
   attach?: HTMLElement;
   text?: string;
   tag?: string;
-  html?: string;
+  html?: string; //  | ((parentCmp: TCMP) => string)
   sanitize?: boolean;
   class?: string | string[];
   animClass?: {
@@ -332,14 +332,14 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
 };
 
 const updateTemplateChildCmps = (cmp: TCMP) => {
-  const children = cmp.elem.children;
-  for (let i = 0; i < children.length; i++) {
-    const id = children[i].getAttribute('id');
-    if (id && children[i].outerHTML === getTempTemplate(id)) {
+  const childCmps = cmp.elem.querySelectorAll('cmp');
+  for (let i = 0; i < childCmps.length; i++) {
+    const id = childCmps[i].getAttribute('id');
+    if (id && childCmps[i].outerHTML === getTempTemplate(id)) {
       const replaceWithCmp = cmps[id];
       if (!replaceWithCmp)
         throw new Error(`The replaceWithCmp not found in cmps list (in parent cmp: ${cmp.id})`);
-      children[i].replaceWith(replaceWithCmp.elem);
+      childCmps[i].replaceWith(replaceWithCmp.elem);
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parentElem = cmp.elem;
       cmp.children.push(replaceWithCmp);

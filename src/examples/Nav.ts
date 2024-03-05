@@ -5,6 +5,15 @@ export const Nav = () => {
     <li>Home</li>
     <li>Components</li>
     ${CMPTemplate({
+      text: 'Change color',
+      animStyle: [
+        { newStyle: { color: 'orange' }, duration: 2000 },
+        { newStyle: { color: 'red' }, duration: 2000, gotoIndex: 0 },
+      ],
+      style: { transition: 'color 2s linear' },
+      onClick: (cmp) => cmp.remove(),
+    })}
+    ${CMPTemplate({
       tag: 'li',
       text: 'Dynamic CMP in template',
       idAttr: true,
@@ -53,7 +62,7 @@ export const Nav = () => {
 
   navCmp.add({ tag: 'li', id: 'different', idAttr: true, text: 'Different' });
 
-  setTimeout(() => navCmp.update({ html: getHtml(), class: 'fsa' }), 2000);
+  // setTimeout(() => navCmp.update({ html: getHtml(), class: 'fsa' }), 2000);
 
   return navCmp;
 };

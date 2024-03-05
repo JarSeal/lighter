@@ -22,10 +22,10 @@ export type TProps = {
   html?: string;
   sanitize?: boolean;
   class?: string | string[];
-  // animClass?: { newClass: string | string[]; length: number; delay?: number; gotoIndex?: number; action?: TClassAction }[];
+  // animClass?: { newClass: string | string[]; duration: number; gotoIndex?: number; action?: TClassAction }[];
   attr?: TAttr | TAttr[];
   style?: TStyle;
-  // animStyle?: { newStyle: TStyle; length: number; delay?: number; gotoIndex?: number; }[];
+  animStyle?: { newStyle: TStyle; duration: number; gotoIndex?: number }[];
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
@@ -48,19 +48,19 @@ export type TCMP = {
   isCmp: boolean;
   html: () => string;
   listeners: { [key: string]: ((e: Event) => void) | null };
-  // timeouts: { [key: string]: (cmp: TCMP) => void };
+  timers: { [key: string]: { fn: unknown; curIndex: number } };
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   // updateAnimClass: (
-  //   animChain: { newClass: string | string[]; length: number; delay?: number; gotoIndex?: number; action?: TClassAction }[]
+  //   animChain: { newClass: string | string[]; duration: number; gotoIndex?: number; action?: TClassAction }[]
   // ) => TCMP;
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
   updateStyle: (newStyle: TStyle) => TCMP;
   // updateAnimStyle: (
-  //   animChain: { newStyle: TStyle; length: number; delay?: number; gotoIndex?: number; }[]
+  //   animChain: { newStyle: TStyle; duration: number; gotoIndex?: number; }[]
   // ) => TCMP;
   updateText: (newText: string) => TCMP;
 };
@@ -88,6 +88,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     isCmp: true,
     html: () => '',
     listeners: {},
+    timers: {},
     add: (child) => addChild(cmp, child),
     remove: () => removeCmp(cmp),
     update: (newProps, callback) => updateCmp(cmp, newProps, callback),
@@ -113,6 +114,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     rootCMP = cmp;
     cmp.parentElem = props.attach;
     cmp.isRoot = true;
+    runAnims(cmp);
   }
 
   // Add cmp to list
@@ -260,16 +262,20 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
 };
 
 const addChild = (parent: TCMP, child?: TCMP | TProps) => {
+  let cmp;
   if (!child) {
-    child = CMP();
+    cmp = CMP();
   } else if (!('isCmp' in child)) {
-    child = CMP(child);
+    cmp = CMP(child);
+  } else {
+    cmp = child;
   }
 
-  parent.children.push(child);
-  parent.elem.appendChild(child.elem);
-  child.parentElem = parent.elem;
-  return child;
+  parent.children.push(cmp);
+  parent.elem.appendChild(cmp.elem);
+  cmp.parentElem = parent.elem;
+  runAnims(cmp);
+  return cmp;
 };
 
 const removeCmp = (cmp: TCMP) => {
@@ -281,6 +287,7 @@ const removeCmp = (cmp: TCMP) => {
 
   // Remove elem from dom and cmps
   removeListeners(cmp, true);
+  removeAnims(cmp);
   cmp.elem.remove();
   delete cmps[cmp.id];
 
@@ -311,6 +318,7 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
     cmp.add(keepAddedChildren[i]);
   }
   updateTemplateChildCmps(cmp);
+  runAnims(cmp);
   if (cmp.props?.onUpdateCmp) cmp.props.onUpdateCmp(cmp);
   if (callback) callback(cmp);
   return cmp;
@@ -328,6 +336,7 @@ const updateTemplateChildCmps = (cmp: TCMP) => {
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parentElem = cmp.elem;
       cmp.children.push(replaceWithCmp);
+      runAnims(replaceWithCmp);
     }
   }
 };
@@ -532,4 +541,38 @@ const removeOutsideClickListener = (cmp: TCMP) => {
   }
   delete onClickOutsideListener.fns[cmp.id];
   onClickOutsideListener.count -= 1;
+};
+
+const runAnims = (cmp: TCMP) => {
+  const styleAnims = cmp.props?.animStyle;
+  if (styleAnims?.length) {
+    cmp.timers.styleAnim = { fn: null, curIndex: 0 };
+    const styleTimerFn = () => {
+      const curIndex = cmp.timers.styleAnim.curIndex;
+      const curAnim = styleAnims[curIndex];
+      if (curIndex >= styleAnims.length) return;
+      const styleProps = Object.keys(curAnim.newStyle);
+      const elem = cmp.elem;
+      for (let i = 0; i < styleProps.length; i++) {
+        elem.style.setProperty(
+          styleProps[i],
+          curAnim.newStyle[styleProps[i]] === null ? null : String(curAnim.newStyle[styleProps[i]])
+        );
+      }
+      cmp.timers.styleAnim.fn = setTimeout(styleTimerFn, curAnim.duration);
+      if (curAnim.gotoIndex !== undefined) {
+        cmp.timers.styleAnim.curIndex = curAnim.gotoIndex as number;
+        return;
+      }
+      cmp.timers.styleAnim.curIndex++;
+    };
+    styleTimerFn();
+  }
+};
+
+const removeAnims = (cmp: TCMP) => {
+  const timerKeys = Object.keys(cmp.timers);
+  for (let i = 0; i < timerKeys.length; i++) {
+    clearTimeout(cmp.timers[timerKeys[i]].fn as NodeJS.Timeout);
+  }
 };

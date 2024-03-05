@@ -44,8 +44,8 @@ export type TProps = {
   onHover?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
-  // onInput?: TListener;
-  // onChange?: TListener;
+  onInput?: TListener;
+  onChange?: TListener;
   onCreateCmp?: (cmp: TCMP) => void;
   onUpdateCmp?: (cmp: TCMP) => void;
   onRemoveCmp?: (cmp: TCMP) => void;
@@ -245,6 +245,24 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     cmp.elem.addEventListener('blur', fn, true);
   } else {
     if (listeners.blur || listeners.blur === null) delete listeners.blur;
+  }
+  if (props?.onInput) {
+    // Add "input" listener
+    const onInput = props.onInput;
+    const fn = (e: Event) => onInput(cmp, e);
+    listeners.input = fn;
+    cmp.elem.addEventListener('input', fn, true);
+  } else {
+    if (listeners.input || listeners.input === null) delete listeners.input;
+  }
+  if (props?.onChange) {
+    // Add "change" listener
+    const onChange = props.onChange;
+    const fn = (e: Event) => onChange(cmp, e);
+    listeners.change = fn;
+    cmp.elem.addEventListener('change', fn, true);
+  } else {
+    if (listeners.change || listeners.change === null) delete listeners.change;
   }
   if (props?.listeners) {
     // Add custom listeners

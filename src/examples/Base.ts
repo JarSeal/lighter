@@ -10,7 +10,7 @@ export const Base = (props: TProps) => {
     onClickOutside: (cmp) => console.log('UUTSIDAN', cmp),
     onFocus: () => console.log('FOCUS'),
     onBlur: () => console.log('BLUR'),
-    text: 'jotein',
+    text: 'jotain',
     idAttr: true,
   });
 
@@ -18,15 +18,11 @@ export const Base = (props: TProps) => {
 
   baseCmp.add({
     html: '<input type="text" />',
-    listeners: [
-      {
-        type: 'input',
-        fn: (_, e) => {
-          const target = e.currentTarget as HTMLInputElement;
-          showInputCmp.update({ text: target.value });
-        },
-      },
-    ],
+    onChange: () => console.log('CHANGE'),
+    onInput: (_, e) => {
+      const target = e.currentTarget as HTMLInputElement;
+      showInputCmp.update({ text: target.value });
+    },
   });
   const showInputCmp = baseCmp.add();
 

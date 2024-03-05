@@ -11,7 +11,13 @@ export const Nav = () => {
         { newStyle: { color: 'red' }, duration: 2000, gotoIndex: 0 },
       ],
       style: { transition: 'color 2s linear' },
-      onClick: (cmp) => cmp.remove(),
+      onClick: (cmp) => {
+        // cmp.remove()
+        cmp.updateAnimStyle([
+          { newStyle: { color: 'lime' }, duration: 2000 },
+          { newStyle: { color: 'blue' }, duration: 2000, gotoIndex: 0 },
+        ]);
+      },
     })}
     ${CMPTemplate({
       tag: 'li',

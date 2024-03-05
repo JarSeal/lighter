@@ -59,9 +59,9 @@ export type TCMP = {
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
   updateStyle: (newStyle: TStyle) => TCMP;
-  // updateAnimStyle: (
-  //   animChain: { newStyle: TStyle; duration: number; gotoIndex?: number; }[]
-  // ) => TCMP;
+  updateAnimStyle: (
+    animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]
+  ) => TCMP;
   updateText: (newText: string) => TCMP;
 };
 
@@ -96,6 +96,8 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
     updateStyle: (newStyle: TStyle) => updateCmpStyle(cmp, newStyle),
+    updateAnimStyle: (animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]) =>
+      updateCmpAnimStyle(cmp, animChain),
     updateText: (newText) => updateCmpText(cmp, newText),
   };
 
@@ -481,6 +483,21 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
   return cmp;
 };
 
+const updateCmpAnimStyle = (
+  cmp: TCMP,
+  animChain: { newStyle: TStyle; duration: number; gotoIndex?: number }[]
+) => {
+  clearTimeout(cmp.timers.animStyle.fn as NodeJS.Timeout);
+  if (cmp.props) {
+    cmp.props.animStyle = animChain;
+  } else {
+    cmp.props = { animStyle: animChain };
+  }
+  runStyleAnim(cmp);
+
+  return cmp;
+};
+
 const updateCmpText = (cmp: TCMP, newText: string) => {
   if (!cmp.props?.text && typeof cmp.props?.text !== 'string') {
     throw new Error(
@@ -544,11 +561,15 @@ const removeOutsideClickListener = (cmp: TCMP) => {
 };
 
 const runAnims = (cmp: TCMP) => {
+  runStyleAnim(cmp);
+};
+
+const runStyleAnim = (cmp: TCMP) => {
   const styleAnims = cmp.props?.animStyle;
   if (styleAnims?.length) {
-    cmp.timers.styleAnim = { fn: null, curIndex: 0 };
+    cmp.timers.animStyle = { fn: null, curIndex: 0 };
     const styleTimerFn = () => {
-      const curIndex = cmp.timers.styleAnim.curIndex;
+      const curIndex = cmp.timers.animStyle.curIndex;
       const curAnim = styleAnims[curIndex];
       if (curIndex >= styleAnims.length) return;
       const styleProps = Object.keys(curAnim.newStyle);
@@ -559,12 +580,12 @@ const runAnims = (cmp: TCMP) => {
           curAnim.newStyle[styleProps[i]] === null ? null : String(curAnim.newStyle[styleProps[i]])
         );
       }
-      cmp.timers.styleAnim.fn = setTimeout(styleTimerFn, curAnim.duration);
+      cmp.timers.animStyle.fn = setTimeout(styleTimerFn, curAnim.duration);
       if (curAnim.gotoIndex !== undefined) {
-        cmp.timers.styleAnim.curIndex = curAnim.gotoIndex as number;
+        cmp.timers.animStyle.curIndex = curAnim.gotoIndex as number;
         return;
       }
-      cmp.timers.styleAnim.curIndex++;
+      cmp.timers.animStyle.curIndex++;
     };
     styleTimerFn();
   }

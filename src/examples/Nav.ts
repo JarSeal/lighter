@@ -1,34 +1,35 @@
-import { CMP, CMPTemplate } from '../Lighter/CMP';
+import { CMP, getCmpById } from '../Lighter/CMP';
+import { Button } from './Button';
 
 export const Nav = () => {
   const getHtml = () => `<ul class="myClass">
     <li>Home</li>
     <li>Components</li>
-    ${CMPTemplate({
+    ${CMP({
       tag: 'li',
       text: 'Change class',
-      animClass: [
-        { class: 'start', duration: 2000, action: 'replace' },
-        { class: 'middle', duration: 2000, action: 'add' },
-        { class: 'end', duration: 2000, action: 'replace', gotoIndex: 0 },
+      anim: [
+        { class: 'start', duration: 2000, classAction: 'replace' },
+        { class: 'middle', duration: 2000, classAction: 'add' },
+        { class: 'end', duration: 2000, classAction: 'replace', gotoIndex: 0 },
       ],
     })}
-    ${CMPTemplate({
+    ${CMP({
       tag: 'li',
       text: 'Change color',
-      animStyle: [
+      anim: [
         { style: { color: 'orange' }, duration: 2000 },
         { style: { color: 'red' }, duration: 2000, gotoIndex: 0 },
       ],
       style: { transition: 'color 0.7s linear' },
       onClick: (cmp) => {
-        cmp.updateAnimStyle([
+        cmp.updateAnim([
           { style: { color: 'lime' }, duration: 2000 },
           { style: { color: 'blue' }, duration: 2000, gotoIndex: 0 },
         ]);
       },
     })}
-    ${CMPTemplate({
+    ${CMP({
       tag: 'li',
       text: 'Dynamic CMP in template',
       idAttr: true,
@@ -43,7 +44,7 @@ export const Nav = () => {
         }
       },
     })}
-    ${CMPTemplate({
+    ${CMP({
       tag: 'li',
       text: 'Another dynamic CMP in template',
       idAttr: true,
@@ -52,7 +53,7 @@ export const Nav = () => {
         cmp.remove();
       },
     })}
-    ${CMPTemplate({
+    ${CMP({
       tag: 'li',
       text: 'One more dynamic CMP in template',
       idAttr: true,
@@ -72,10 +73,12 @@ export const Nav = () => {
       listeners: [{ type: 'mousedown', fn: () => console.log('MOUSEDOWN') }],
     })}
     <li>
-      <div>${CMPTemplate({
-        tag: 'span',
+      <div>${Button({
         text: 'Deeper in hierarchy',
-        onClick: () => console.log('DEEP'),
+        onClick: () => {
+          const inputTextCmp = getCmpById('text-input');
+          console.log('DEEP', inputTextCmp?.focus());
+        },
       })}</div>
     </li>
   </ul>`;
@@ -84,15 +87,13 @@ export const Nav = () => {
 
   navCmp.add({ tag: 'li', id: 'different', idAttr: true, text: 'Different' });
 
-  setTimeout(
-    () =>
-      navCmp.updateAnimClass([
-        { class: 'start', duration: 1000 },
-        { class: 'middle', duration: 2000, action: 'add' },
-        { class: 'END', duration: 3000 },
-      ]),
-    2000
-  );
+  setTimeout(() => {
+    navCmp.updateAnim([
+      { class: 'start', duration: 1000 },
+      { class: 'middle', duration: 2000, classAction: 'add' },
+      { class: 'END', duration: 3000 },
+    ]);
+  }, 2000);
 
   return navCmp;
 };

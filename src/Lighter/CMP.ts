@@ -24,6 +24,22 @@ export type TAnimStyle = {
 
 export type TAttr = { key: string; value: string };
 
+export type TAnimState = {
+  setState: (key: string, value: unknown) => void;
+  removeState: (key: string) => void;
+  state: { [key: string]: unknown };
+};
+
+export type TAnimChain = {
+  duration: number;
+  gotoIndex?: number | ((cmp: TCMP, animState: TAnimState) => number);
+  style?: TStyle;
+  class?: string | string[];
+  classAction?: TClassAction;
+  phaseStartFn?: (cmp: TCMP, animState: TAnimState) => void | number;
+  phaseEndFn?: (cmp: TCMP, animState: TAnimState) => void | number;
+};
+
 export type TSettings = { sanitizer: (html: string) => string; sanitizeAll: boolean };
 
 export type TProps = {
@@ -35,10 +51,9 @@ export type TProps = {
   html?: string | ((cmp: TCMP) => string);
   sanitize?: boolean;
   class?: string | string[];
-  animClass?: TAnimClass[];
   attr?: TAttr | TAttr[];
   style?: TStyle;
-  animStyle?: { style: TStyle; duration: number; gotoIndex?: number }[];
+  anim?: TAnimChain[];
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
@@ -50,6 +65,8 @@ export type TProps = {
   onUpdateCmp?: (cmp: TCMP) => void;
   onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: { type: string; fn: TListener }[];
+  focus?: boolean;
+  // scrollToElem?: { scrollElem?: HTMLElement; offset?: number } | boolean;
 };
 
 export type TCMP = {
@@ -61,19 +78,20 @@ export type TCMP = {
   isTemplateCmp?: boolean;
   isRoot?: boolean;
   isCmp: boolean;
-  html: () => string;
   listeners: { [key: string]: ((e: Event) => void) | null };
-  timers: { [key: string]: { fn: unknown; curIndex: number } };
+  timers: { [key: string]: { fn: unknown; curIndex: number; animState: TAnimState } };
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
-  updateAnimClass: (animChain: TAnimClass[]) => TCMP;
   updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
   updateStyle: (newStyle: TStyle) => TCMP;
-  updateAnimStyle: (animChain: TAnimStyle[]) => TCMP;
   updateText: (newText: string) => TCMP;
+  updateAnim: (animChain: TAnimChain[]) => TCMP;
+  focus: (focusValueToProps?: boolean) => TCMP;
+  blur: (focusValueToProps?: boolean) => TCMP;
+  // scrollToElem: ({ scrollElem?: HTMLElement; offset?: number } | boolean) => TCMP;
 };
 
 let sanitizer: ((html: string) => string) | null = null;
@@ -97,25 +115,24 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     elem: null as unknown as HTMLElement,
     parentElem: null,
     isCmp: true,
-    html: () => '',
     listeners: {},
     timers: {},
     add: (child) => addChild(cmp, child),
     remove: () => removeCmp(cmp),
     update: (newProps, callback) => updateCmp(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
-    updateAnimClass: (animChain: TAnimClass[]) => updateCmpAnimClass(cmp, animChain),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
     updateStyle: (newStyle: TStyle) => updateCmpStyle(cmp, newStyle),
-    updateAnimStyle: (animChain: TAnimStyle[]) => updateCmpAnimStyle(cmp, animChain),
     updateText: (newText) => updateCmpText(cmp, newText),
+    updateAnim: (animChain: TAnimChain[]) => updateCmpAnim(cmp, animChain),
+    focus: (focusValueToProps) => focusCmp(cmp, focusValueToProps),
+    blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
   };
 
   // Create new element
   const elem = createElem(cmp, props);
   cmp.elem = elem;
-  cmp.html = () => getTempTemplate(cmp.id);
 
   // Create possible listeners
   const listeners = createListeners(cmp, props);
@@ -136,14 +153,13 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   // Check for child <cmp> tags and replace possible tempTemplates
   updateTemplateChildCmps(cmp);
 
+  // Overwrite toString method
+  cmp.toString = () => getTempTemplate(cmp.id);
+
+  // Callback for onCreate
   if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
 
   return cmp;
-};
-
-export const CMPTemplate = (props?: TProps) => {
-  const cmp = CMP(props);
-  return cmp.html();
 };
 
 export const getCmpById = (id: string) => cmps[id];
@@ -160,6 +176,7 @@ const createElem = (cmp: TCMP, props?: TProps) => {
     template.innerHTML =
       (props.sanitize || sanitizeAll) && sanitizer ? sanitizer(rawHtml) : rawHtml;
     elem = template.content.children[0] as HTMLElement;
+    setPropsValue(cmp, { tag: elem.tagName.toLowerCase() });
   } else {
     elem = document.createElement(props?.tag ? props.tag : 'div') as HTMLElement;
   }
@@ -306,6 +323,7 @@ const addChild = (parent: TCMP, child?: TCMP | TProps) => {
   parent.children.push(cmp);
   parent.elem.appendChild(cmp.elem);
   cmp.parentElem = parent.elem;
+  if (cmp.props?.focus) focusCmp(cmp);
   runAnims(cmp);
   return cmp;
 };
@@ -349,6 +367,7 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
   for (let i = 0; i < keepAddedChildren.length; i++) {
     cmp.add(keepAddedChildren[i]);
   }
+  if (cmp.props?.focus) focusCmp(cmp);
   updateTemplateChildCmps(cmp);
   runAnims(cmp);
   if (cmp.props?.onUpdateCmp) cmp.props.onUpdateCmp(cmp);
@@ -357,16 +376,17 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
 };
 
 const updateTemplateChildCmps = (cmp: TCMP) => {
-  const childCmps = cmp.elem.querySelectorAll('cmp');
-  for (let i = 0; i < childCmps.length; i++) {
-    const id = childCmps[i].getAttribute('id');
-    if (id && childCmps[i].outerHTML === getTempTemplate(id)) {
+  const childCmpElems = cmp.elem.querySelectorAll('cmp');
+  for (let i = 0; i < childCmpElems.length; i++) {
+    const id = childCmpElems[i].getAttribute('id');
+    if (id && childCmpElems[i].outerHTML === getTempTemplate(id)) {
       const replaceWithCmp = cmps[id];
       if (!replaceWithCmp)
         throw new Error(`The replaceWithCmp not found in cmps list (in parent cmp: ${cmp.id})`);
-      childCmps[i].replaceWith(replaceWithCmp.elem);
+      childCmpElems[i].replaceWith(replaceWithCmp.elem);
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parentElem = cmp.elem;
+      if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
     }
@@ -382,7 +402,7 @@ const updateCmpClass = (
   let oldClasses: string[] = [];
   if (Array.isArray(newClass)) {
     classes = newClass;
-  } else if (typeof newClass === 'string') {
+  } else {
     classes = newClass.split(' ');
   }
   if (cmp.props?.class && Array.isArray(cmp.props.class)) {
@@ -396,11 +416,7 @@ const updateCmpClass = (
       oldClasses = oldClasses.filter((c) => c !== classes[i].trim());
       cmp.elem.classList.remove(classes[i].trim());
     }
-    if (cmp.props) {
-      cmp.props.class = oldClasses.join(' ').trim();
-    } else {
-      cmp.props = { class: oldClasses.join(' ').trim() };
-    }
+    setPropsValue(cmp, { class: oldClasses.join(' ').trim().split(' ') });
   } else if (action === 'toggle') {
     // Toggle
     for (let i = 0; i < classes.length; i++) {
@@ -412,28 +428,16 @@ const updateCmpClass = (
       cmp.elem.classList.add(classes[i].trim());
       oldClasses.push(classes[i].trim());
     }
-    if (cmp.props) {
-      cmp.props.class = oldClasses.join(' ').trim();
-    } else {
-      cmp.props = { class: oldClasses.join(' ').trim() };
-    }
+    setPropsValue(cmp, { class: oldClasses.join(' ').trim().split(' ') });
   } else {
     if (action === 'replace') {
       // Replace
       cmp.elem.removeAttribute('class');
-      if (cmp.props) {
-        cmp.props.class = newClass;
-      } else {
-        cmp.props = { class: newClass };
-      }
+      setPropsValue(cmp, { class: classes });
     } else {
       // Add
       const addedClass = `${oldClasses.join(' ').trim()} ${classes.join(' ')}`.trim();
-      if (cmp.props) {
-        cmp.props.class = addedClass;
-      } else {
-        cmp.props = { class: addedClass };
-      }
+      setPropsValue(cmp, { class: addedClass.split(' ') });
     }
     for (let i = 0; i < classes.length; i++) {
       cmp.elem.classList.add(classes[i].trim());
@@ -464,23 +468,7 @@ const updateCmpAttr = (cmp: TCMP, newAttr: TAttr | TAttr[]) => {
     (attr) => !attributes.find((attr2) => attr.key === attr2.key)
   );
   const combinedAttributes = oldAttributes.concat(attributes);
-  if (cmp.props) {
-    cmp.props.attr = combinedAttributes;
-  } else {
-    cmp.props = { attr: combinedAttributes };
-  }
-
-  return cmp;
-};
-
-const updateCmpAnimClass = (cmp: TCMP, animChain: TAnimClass[]) => {
-  removeAnim(cmp, 'animClass');
-  if (cmp.props) {
-    cmp.props.animClass = animChain;
-  } else {
-    cmp.props = { animClass: animChain };
-  }
-  runAnimClass(cmp);
+  setPropsValue(cmp, { attr: combinedAttributes });
 
   return cmp;
 };
@@ -503,11 +491,7 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
     oldAttributes = [attrProps];
   }
   oldAttributes = oldAttributes.filter((attr) => !attributeKeys.includes(attr.key));
-  if (cmp.props) {
-    cmp.props.attr = oldAttributes;
-  } else {
-    cmp.props = { attr: oldAttributes };
-  }
+  setPropsValue(cmp, { attr: oldAttributes });
 
   return cmp;
 };
@@ -525,18 +509,6 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
   return cmp;
 };
 
-const updateCmpAnimStyle = (cmp: TCMP, animChain: TAnimStyle[]) => {
-  removeAnim(cmp, 'animStyle');
-  if (cmp.props) {
-    cmp.props.animStyle = animChain;
-  } else {
-    cmp.props = { animStyle: animChain };
-  }
-  runAnimStyle(cmp);
-
-  return cmp;
-};
-
 const updateCmpText = (cmp: TCMP, newText: string) => {
   if (!cmp.props?.text && typeof cmp.props?.text !== 'string') {
     throw new Error(
@@ -544,12 +516,92 @@ const updateCmpText = (cmp: TCMP, newText: string) => {
     );
   }
   cmp.elem.textContent = newText;
-  if (cmp.props) {
-    cmp.props.text = newText;
-  } else {
-    cmp.props = { text: newText };
+  setPropsValue(cmp, { text: newText });
+
+  return cmp;
+};
+
+const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
+  removeAnim(cmp, 'cmpAnim');
+
+  if (!animChain?.length) {
+    delete cmp.timers.cmpAnim;
+    return cmp;
   }
 
+  const animState: TAnimState = {
+    setState: (key, value) => (animState.state[key] = value),
+    removeState: (key) => delete animState.state[key],
+    state: {},
+  };
+
+  cmp.timers.cmpAnim = { fn: null, curIndex: 0, animState };
+
+  const timerFn = () => {
+    const curIndex = cmp.timers.cmpAnim.curIndex;
+    const curAnim = animChain[curIndex];
+
+    let nextIndex: null | number = null;
+
+    // Check previous anim phaseEndFn
+    const prevAnim = animChain[curIndex - 1];
+    if (prevAnim?.phaseEndFn) {
+      const phaseEndResult = prevAnim.phaseEndFn(cmp, cmp.timers.cmpAnim.animState);
+      nextIndex = typeof phaseEndResult === 'number' ? phaseEndResult : null;
+      if (nextIndex !== null) {
+        cmp.timers.cmpAnim.curIndex = nextIndex;
+        timerFn();
+      }
+    }
+
+    // Check if we are at the end of the chain
+    if (curIndex >= animChain.length) {
+      return;
+    }
+
+    // Check current anim phaseStartFn
+    if (curAnim?.phaseStartFn) {
+      const phaseStartResult = curAnim.phaseStartFn(cmp, cmp.timers.cmpAnim.animState);
+      nextIndex = typeof phaseStartResult === 'number' ? phaseStartResult : null;
+    }
+
+    if (curAnim.class) {
+      updateCmpClass(cmp, curAnim.class, curAnim.classAction);
+    }
+
+    if (curAnim.style) {
+      updateCmpStyle(cmp, curAnim.style);
+    }
+
+    cmp.timers.cmpAnim.fn = setTimeout(timerFn, curAnim.duration);
+
+    if (curAnim.gotoIndex !== undefined) {
+      cmp.timers.cmpAnim.curIndex =
+        typeof curAnim.gotoIndex === 'number'
+          ? curAnim.gotoIndex
+          : curAnim.gotoIndex(cmp, cmp.timers.cmpAnim.animState);
+      return;
+    }
+    cmp.timers.cmpAnim.curIndex = nextIndex !== null ? nextIndex : cmp.timers.cmpAnim.curIndex + 1;
+  };
+  timerFn();
+
+  return cmp;
+};
+
+const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
+  cmp.elem.focus();
+  if (focusValueToProps !== undefined) {
+    setPropsValue(cmp, { focus: focusValueToProps });
+  }
+  return cmp;
+};
+
+const blurCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
+  cmp.elem.blur();
+  if (focusValueToProps !== undefined) {
+    setPropsValue(cmp, { focus: focusValueToProps });
+  }
   return cmp;
 };
 
@@ -600,55 +652,7 @@ const removeOutsideClickListener = (cmp: TCMP) => {
 };
 
 const runAnims = (cmp: TCMP) => {
-  runAnimClass(cmp);
-  runAnimStyle(cmp);
-};
-
-const runAnimClass = (cmp: TCMP) => {
-  const classAnims = cmp.props?.animClass;
-  if (classAnims?.length) {
-    cmp.timers.animClass = { fn: null, curIndex: 0 };
-    const styleTimerFn = () => {
-      const curIndex = cmp.timers.animClass.curIndex;
-      const curAnim = classAnims[curIndex];
-      if (curIndex >= classAnims.length) return;
-      updateCmpClass(cmp, curAnim.class, curAnim.action);
-      cmp.timers.animClass.fn = setTimeout(styleTimerFn, curAnim.duration);
-      if (curAnim.gotoIndex !== undefined) {
-        cmp.timers.animClass.curIndex = curAnim.gotoIndex as number;
-        return;
-      }
-      cmp.timers.animClass.curIndex++;
-    };
-    styleTimerFn();
-  }
-};
-
-const runAnimStyle = (cmp: TCMP) => {
-  const styleAnims = cmp.props?.animStyle;
-  if (styleAnims?.length) {
-    cmp.timers.animStyle = { fn: null, curIndex: 0 };
-    const styleTimerFn = () => {
-      const curIndex = cmp.timers.animStyle.curIndex;
-      const curAnim = styleAnims[curIndex];
-      if (curIndex >= styleAnims.length) return;
-      const styleProps = Object.keys(curAnim.style);
-      const elem = cmp.elem;
-      for (let i = 0; i < styleProps.length; i++) {
-        elem.style.setProperty(
-          styleProps[i],
-          curAnim.style[styleProps[i]] === null ? null : String(curAnim.style[styleProps[i]])
-        );
-      }
-      cmp.timers.animStyle.fn = setTimeout(styleTimerFn, curAnim.duration);
-      if (curAnim.gotoIndex !== undefined) {
-        cmp.timers.animStyle.curIndex = curAnim.gotoIndex as number;
-        return;
-      }
-      cmp.timers.animStyle.curIndex++;
-    };
-    styleTimerFn();
-  }
+  if (cmp.props?.anim) updateCmpAnim(cmp, cmp.props?.anim);
 };
 
 const removeAnim = (cmp: TCMP, animKey: string) => {
@@ -662,3 +666,6 @@ const removeAnims = (cmp: TCMP) => {
     removeAnim(cmp, timerKeys[i]);
   }
 };
+
+const setPropsValue = (cmp: TCMP, props: Partial<TProps>) =>
+  (cmp.props = { ...cmp.props, ...props });

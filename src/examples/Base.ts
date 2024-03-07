@@ -1,4 +1,4 @@
-import { CMP, type TProps } from '../Lighter/CMP';
+import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './Button';
 import { Nav } from './Nav';
 
@@ -33,6 +33,33 @@ export const Base = (props: TProps) => {
   for (let i = 0; i < 10; i++) {
     baseCmp.add({ text: Math.random().toString(), onClick: (cmp) => console.log(cmp.props?.text) });
   }
+
+  baseCmp.add({
+    style: { background: 'grey', minHeight: '100vh' },
+    onClick: () => {
+      const scrollTestCmp = getCmpById('scroll-test');
+      scrollTestCmp?.scrollIntoView({ behavior: 'smooth' });
+    },
+  });
+
+  baseCmp.add({
+    id: 'scroll-test',
+    text: 'HERE IS THE SCROLL TO COMPONENT',
+    scrollIntoView: { behavior: 'smooth' },
+    onCreateCmp: (cmp) => cmp.scrollIntoView({ behavior: 'smooth' }),
+  });
+
+  baseCmp.add({
+    style: { background: 'grey', minHeight: '1800px' },
+    onClick: () => {
+      const scrollTestCmp = getCmpById('scroll-test');
+      scrollTestCmp?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    },
+  });
+
+  setTimeout(() => {
+    baseCmp.add({ scrollIntoView: { behavior: 'smooth' } });
+  }, 2000);
 
   return baseCmp;
 };

@@ -163,7 +163,43 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   return cmp;
 };
 
-export const getCmpById = (id: string) => cmps[id];
+const addChild = (parent: TCMP, child?: TCMP | TProps) => {
+  let cmp;
+  if (!child) {
+    cmp = CMP();
+  } else if (!('isCmp' in child)) {
+    cmp = CMP(child);
+  } else {
+    cmp = child;
+  }
+
+  parent.children.push(cmp);
+  parent.elem.appendChild(cmp.elem);
+  cmp.parentElem = parent.elem;
+  if (cmp.props?.focus) focusCmp(cmp);
+  if (cmp.props?.scrollIntoView !== undefined) {
+    console.log('TADAA', cmp.props.scrollIntoView);
+    // const checkParent = (curElem: HTMLElement) => {
+    //   const parent = curElem.parentElement;
+    //   console.log('parent', parent?.tagName);
+    //   if (!parent) return;
+    //   if (parent.tagName === 'HTML') {
+    //     console.log('FINISHED');
+    //     return;
+    //   }
+    //   checkParent(parent);
+    // };
+    // checkParent(cmp.elem);
+    // scrollCmpIntoView(cmp, cmp.props.scrollIntoView);
+    // setTimeout(() => {
+    //   scrollCmpIntoView(cmp, cmp.props.scrollIntoView);
+    // }, 1);
+  }
+  runAnims(cmp);
+  return cmp;
+};
+
+export const getCmpById = (id: string): TCMP | null => cmps[id] || null;
 
 const getTempTemplate = (id: string) => `<cmp id="${id}"></cmp>`;
 
@@ -210,10 +246,14 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   if (props?.style) {
     const styleProps = Object.keys(props.style);
     for (let i = 0; i < styleProps.length; i++) {
-      elem.style.setProperty(
-        styleProps[i],
-        props.style[styleProps[i]] === null ? null : String(props.style[styleProps[i]])
-      );
+      const prop = styleProps[i];
+      const value = props.style[styleProps[i]];
+      if (prop && value !== null) {
+        // @TODO: test if null values remove the rule?
+        elem.style[prop as unknown as number] = String(value);
+      } else if (value === null) {
+        elem.style.removeProperty(prop);
+      }
     }
   }
 
@@ -311,25 +351,6 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   if (cmp.props?.onClickOutside) removeOutsideClickListener(cmp);
 };
 
-const addChild = (parent: TCMP, child?: TCMP | TProps) => {
-  let cmp;
-  if (!child) {
-    cmp = CMP();
-  } else if (!('isCmp' in child)) {
-    cmp = CMP(child);
-  } else {
-    cmp = child;
-  }
-
-  parent.children.push(cmp);
-  parent.elem.appendChild(cmp.elem);
-  cmp.parentElem = parent.elem;
-  if (cmp.props?.focus) focusCmp(cmp);
-  if (cmp.props?.scrollIntoView) scrollCmpIntoView(cmp, cmp.props.scrollIntoView);
-  runAnims(cmp);
-  return cmp;
-};
-
 const removeCmp = (cmp: TCMP) => {
   // Check children
   for (let i = 0; i < cmp.children.length; i++) {
@@ -389,7 +410,7 @@ const updateTemplateChildCmps = (cmp: TCMP) => {
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parentElem = cmp.elem;
       if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
-      if (replaceWithCmp.props?.scrollIntoView)
+      if (replaceWithCmp.props?.scrollIntoView !== undefined)
         scrollCmpIntoView(replaceWithCmp, replaceWithCmp.props.scrollIntoView);
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
@@ -502,12 +523,15 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
 
 const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
   const styleProps = Object.keys(newStyle);
-  const elem = cmp.elem as HTMLElement;
   for (let i = 0; i < styleProps.length; i++) {
-    elem.style.setProperty(
-      styleProps[i],
-      newStyle[styleProps[i]] === null ? null : String(newStyle[styleProps[i]])
-    );
+    const prop = styleProps[i];
+    const value = newStyle[styleProps[i]];
+    if (prop && value !== null) {
+      // @TODO: test if null values remove the rule?
+      cmp.elem.style[prop as unknown as number] = String(value);
+    } else if (value === null) {
+      cmp.elem.style.removeProperty(prop);
+    }
   }
 
   return cmp;

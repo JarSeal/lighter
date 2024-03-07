@@ -45,7 +45,6 @@ export const Base = (props: TProps) => {
   baseCmp.add({
     id: 'scroll-test',
     text: 'HERE IS THE SCROLL TO COMPONENT',
-    scrollIntoView: { behavior: 'smooth' },
     onCreateCmp: (cmp) => cmp.scrollIntoView({ behavior: 'smooth' }),
   });
 
@@ -57,9 +56,9 @@ export const Base = (props: TProps) => {
     },
   });
 
-  setTimeout(() => {
-    baseCmp.add({ scrollIntoView: { behavior: 'smooth' } });
-  }, 2000);
+  // setTimeout(() => {
+  //   baseCmp.add({ scrollIntoView: { behavior: 'smooth' } });
+  // }, 2000);
 
   return baseCmp;
 };

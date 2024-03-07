@@ -66,7 +66,6 @@ export type TProps = {
   onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: { type: string; fn: TListener }[];
   focus?: boolean;
-  scrollIntoView?: boolean | ScrollIntoViewOptions;
 };
 
 export type TCMP = {
@@ -177,24 +176,6 @@ const addChild = (parent: TCMP, child?: TCMP | TProps) => {
   parent.elem.appendChild(cmp.elem);
   cmp.parentElem = parent.elem;
   if (cmp.props?.focus) focusCmp(cmp);
-  if (cmp.props?.scrollIntoView !== undefined) {
-    console.log('TADAA', cmp.props.scrollIntoView);
-    // const checkParent = (curElem: HTMLElement) => {
-    //   const parent = curElem.parentElement;
-    //   console.log('parent', parent?.tagName);
-    //   if (!parent) return;
-    //   if (parent.tagName === 'HTML') {
-    //     console.log('FINISHED');
-    //     return;
-    //   }
-    //   checkParent(parent);
-    // };
-    // checkParent(cmp.elem);
-    // scrollCmpIntoView(cmp, cmp.props.scrollIntoView);
-    // setTimeout(() => {
-    //   scrollCmpIntoView(cmp, cmp.props.scrollIntoView);
-    // }, 1);
-  }
   runAnims(cmp);
   return cmp;
 };
@@ -410,8 +391,6 @@ const updateTemplateChildCmps = (cmp: TCMP) => {
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parentElem = cmp.elem;
       if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
-      if (replaceWithCmp.props?.scrollIntoView !== undefined)
-        scrollCmpIntoView(replaceWithCmp, replaceWithCmp.props.scrollIntoView);
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
     }

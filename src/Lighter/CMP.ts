@@ -66,7 +66,7 @@ export type TProps = {
   onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: { type: string; fn: TListener }[];
   focus?: boolean;
-  // scrollToElem?: { scrollElem?: HTMLElement; offset?: number } | boolean;
+  scrollIntoView?: boolean | ScrollIntoViewOptions;
 };
 
 export type TCMP = {
@@ -91,7 +91,7 @@ export type TCMP = {
   updateAnim: (animChain: TAnimChain[]) => TCMP;
   focus: (focusValueToProps?: boolean) => TCMP;
   blur: (focusValueToProps?: boolean) => TCMP;
-  // scrollToElem: ({ scrollElem?: HTMLElement; offset?: number } | boolean) => TCMP;
+  scrollIntoView: (params?: boolean | ScrollIntoViewOptions | undefined) => TCMP;
 };
 
 let sanitizer: ((html: string) => string) | null = null;
@@ -128,6 +128,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     updateAnim: (animChain: TAnimChain[]) => updateCmpAnim(cmp, animChain),
     focus: (focusValueToProps) => focusCmp(cmp, focusValueToProps),
     blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
+    scrollIntoView: (params) => scrollCmpIntoView(cmp, params),
   };
 
   // Create new element
@@ -324,6 +325,7 @@ const addChild = (parent: TCMP, child?: TCMP | TProps) => {
   parent.elem.appendChild(cmp.elem);
   cmp.parentElem = parent.elem;
   if (cmp.props?.focus) focusCmp(cmp);
+  if (cmp.props?.scrollIntoView) scrollCmpIntoView(cmp, cmp.props.scrollIntoView);
   runAnims(cmp);
   return cmp;
 };
@@ -387,6 +389,8 @@ const updateTemplateChildCmps = (cmp: TCMP) => {
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parentElem = cmp.elem;
       if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
+      if (replaceWithCmp.props?.scrollIntoView)
+        scrollCmpIntoView(replaceWithCmp, replaceWithCmp.props.scrollIntoView);
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
     }
@@ -602,6 +606,11 @@ const blurCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   if (focusValueToProps !== undefined) {
     setPropsValue(cmp, { focus: focusValueToProps });
   }
+  return cmp;
+};
+
+const scrollCmpIntoView = (cmp: TCMP, params?: boolean | ScrollIntoViewOptions) => {
+  cmp.elem.scrollIntoView(params);
   return cmp;
 };
 

@@ -1,5 +1,6 @@
 import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
-import { Button } from './Button';
+import { Button } from './basicComponents/Button';
+import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
 
 export const Base = (props: TProps) => {
@@ -30,6 +31,19 @@ export const Base = (props: TProps) => {
     onFocus: () => console.log('FOCUS'),
   });
   const showInputCmp = baseCmp.add();
+
+  baseCmp.add(
+    InputText({
+      label: {
+        html: `<span>My input label and ${CMP({ text: 'CMP', id: 'TUUT', idAttr: true })}</span>`,
+      },
+      input: {
+        onFocus: () => console.log('FOCUSTHISSHIT'),
+      },
+      type: 'password',
+      value: 'SKKFSJAKJF',
+    })
+  );
 
   for (let i = 0; i < 10; i++) {
     baseCmp.add({ text: Math.random().toString(), onClick: (cmp) => console.log(cmp.props?.text) });

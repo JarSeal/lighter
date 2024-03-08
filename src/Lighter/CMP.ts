@@ -22,7 +22,7 @@ export type TAnimStyle = {
   gotoIndex?: number;
 };
 
-export type TAttr = { key: string; value: string };
+export type TAttr = { [key: string]: unknown };
 
 export type TAnimState = {
   setState: (key: string, value: unknown) => void;
@@ -56,7 +56,7 @@ export type TProps = {
   html?: string | ((cmp: TCMP) => string);
   sanitize?: boolean;
   class?: string | string[];
-  attr?: TAttr | TAttr[];
+  attr?: TAttr;
   style?: TStyle;
   anim?: TAnimChain[];
   onClick?: TListener;
@@ -88,7 +88,7 @@ export type TCMP = {
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
-  updateAttr: (newAttr: TAttr | TAttr[]) => TCMP;
+  updateAttr: (newAttr: TAttr) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
   updateStyle: (newStyle: TStyle) => TCMP;
   updateText: (newText: string) => TCMP;
@@ -96,6 +96,12 @@ export type TCMP = {
   focus: (focusValueToProps?: boolean) => TCMP;
   blur: (focusValueToProps?: boolean) => TCMP;
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
+
+  // @SUGGESTION:
+  // removeListener: (key: string) => TCMP;
+  // removeTimer: (key: string) => TCMP;
+  // getChildCmpById: (id: string) => TCMP;
+  // getParentCmpById: (id: string) => TCMP;
 };
 
 const globalSettings: TSettings = {
@@ -222,6 +228,8 @@ const addTemplateChildCmp = (cmp: TCMP) => {
 
 export const getCmpById = (id: string): TCMP | null => cmps[id] || null;
 
+export const createNewId = () => uuidv4();
+
 const getTempTemplate = (id: string) => `<cmp id="${id}"></cmp>`;
 
 const createElem = (cmp: TCMP, props?: TProps) => {
@@ -242,15 +250,11 @@ const createElem = (cmp: TCMP, props?: TProps) => {
   }
   if (props?.text) elem.textContent = props?.text;
 
-  // Attributes
-  let attributes: TAttr[] = [];
-  if (props?.attr && Array.isArray(props.attr)) {
-    attributes = props.attr;
-  } else if (typeof props?.attr === 'string') {
-    attributes.push(props.attr);
-  }
-  for (let i = 0; i < attributes.length; i++) {
-    elem.setAttribute(attributes[i].key, attributes[i].value);
+  const attrKeys = props?.attr ? Object.keys(props.attr) : [];
+  const attributes = props?.attr || {};
+  for (let i = 0; i < attrKeys.length; i++) {
+    const value = attributes[attrKeys[i]];
+    elem.setAttribute(attrKeys[i], String(value));
   }
   if (props?.idAttr) elem.setAttribute('id', cmp.id);
 
@@ -475,35 +479,22 @@ const updateCmpClass = (
   return cmp;
 };
 
-const updateCmpAttr = (cmp: TCMP, newAttr: TAttr | TAttr[]) => {
-  let attributes: TAttr[] = [];
-  let oldAttributes: TAttr[] = [];
-  if (Array.isArray(newAttr)) {
-    attributes = newAttr;
-  } else {
-    attributes.push(newAttr);
+const updateCmpAttr = (cmp: TCMP, newAttr: TAttr) => {
+  const attrKeys = Object.keys(newAttr);
+  for (let i = 0; i < attrKeys.length; i++) {
+    const value = newAttr[attrKeys[i]];
+    cmp.elem.setAttribute(attrKeys[i], String(value));
+    if (cmp.props?.attr) {
+      cmp.props.attr[attrKeys[i]] = String(value);
+    }
   }
-  for (let i = 0; i < attributes.length; i++) {
-    cmp.elem.setAttribute(attributes[i].key, attributes[i].value);
-  }
-  const attrProps = cmp.props?.attr || [];
-  if (Array.isArray(attrProps)) {
-    oldAttributes = attrProps;
-  } else {
-    oldAttributes = [attrProps];
-  }
-  oldAttributes = oldAttributes.filter(
-    (attr) => !attributes.find((attr2) => attr.key === attr2.key)
-  );
-  const combinedAttributes = oldAttributes.concat(attributes);
-  setPropsValue(cmp, { attr: combinedAttributes });
 
   return cmp;
 };
 
 const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
   let attributeKeys: string | string[] = [];
-  let oldAttributes: TAttr[] = [];
+  const attrProps = cmp.props?.attr;
   if (Array.isArray(attrKey)) {
     attributeKeys = attrKey;
   } else if (typeof attrKey === 'string') {
@@ -511,15 +502,9 @@ const removeCmpAttr = (cmp: TCMP, attrKey: string | string[]) => {
   }
   for (let i = 0; i < attributeKeys.length; i++) {
     cmp.elem.removeAttribute(attributeKeys[i]);
+    if (attrProps) delete attrProps[attributeKeys[i]];
   }
-  const attrProps = cmp.props?.attr || [];
-  if (Array.isArray(attrProps)) {
-    oldAttributes = attrProps;
-  } else {
-    oldAttributes = [attrProps];
-  }
-  oldAttributes = oldAttributes.filter((attr) => !attributeKeys.includes(attr.key));
-  setPropsValue(cmp, { attr: oldAttributes });
+  setPropsValue(cmp, { attr: attrProps });
 
   return cmp;
 };

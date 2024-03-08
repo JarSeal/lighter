@@ -1,5 +1,5 @@
 import { CMP, getCmpById } from '../Lighter/CMP';
-import { Button } from './Button';
+import { Button } from './basicComponents/Button';
 
 export const Nav = () => {
   const getHtml = () => `<ul class="myClass">
@@ -62,10 +62,10 @@ export const Nav = () => {
         console.log('DYNAMIC333 CLICKED!', cmp.props);
         cmp.updateClass('someClass', 'toggle');
         if (cmp.props?.class?.includes('someClass')) {
-          cmp.updateAttr([
-            { key: 'disabled', value: 'true' },
-            { key: 'data-xxx', value: '23' },
-          ]);
+          cmp.updateAttr({
+            disabled: 'true',
+            'data-xxx': '23',
+          });
         } else {
           cmp.removeAttr(['disabled', 'data-xxx']);
         }

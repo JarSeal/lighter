@@ -32,7 +32,7 @@ export type TAnimState = {
 
 export type TAnimChain = {
   duration: number;
-  gotoIndex?: number | ((cmp: TCMP, animState: TAnimState) => number);
+  gotoIndex?: number | ((cmp: TCMP, animState?: TAnimState) => number);
   style?: TStyle;
   class?: string | string[];
   classAction?: TClassAction;
@@ -67,7 +67,6 @@ export type TProps = {
   onInput?: TListener;
   onChange?: TListener;
   onCreateCmp?: (cmp: TCMP) => void;
-  onUpdateCmp?: (cmp: TCMP) => void;
   onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: { type: string; fn: TListener }[];
   focus?: boolean;
@@ -83,9 +82,8 @@ export type TCMP = {
   isTemplateCmp?: boolean;
   isRoot?: boolean;
   isCmp: boolean;
-  isInDom?: boolean;
   listeners: { [key: string]: ((e: Event) => void) | null };
-  timers: { [key: string]: { fn: unknown; curIndex: number; animState: TAnimState } };
+  timers: { [key: string]: { fn: unknown; curIndex?: number; animState?: TAnimState } };
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
@@ -97,7 +95,7 @@ export type TCMP = {
   updateAnim: (animChain: TAnimChain[]) => TCMP;
   focus: (focusValueToProps?: boolean) => TCMP;
   blur: (focusValueToProps?: boolean) => TCMP;
-  scrollIntoView: (params?: boolean | ScrollIntoViewOptions | undefined) => TCMP;
+  scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
 };
 
 const globalSettings: TSettings = {
@@ -137,7 +135,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     updateAnim: (animChain: TAnimChain[]) => updateCmpAnim(cmp, animChain),
     focus: (focusValueToProps) => focusCmp(cmp, focusValueToProps),
     blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
-    scrollIntoView: (params) => scrollCmpIntoView(cmp, params),
+    scrollIntoView: (params, timeout) => scrollCmpIntoView(cmp, params, timeout),
   };
 
   // Create new element
@@ -166,7 +164,6 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     cmp.parent = null;
     cmp.isRoot = true;
     runAnims(cmp);
-    checkIfInDom(cmp);
   }
 
   // Add cmp to list
@@ -199,7 +196,6 @@ const addChildCmp = (parent: TCMP, child?: TCMP | TProps) => {
   cmp.parentElem = parent.elem;
   if (cmp.props?.focus) focusCmp(cmp);
   runAnims(cmp);
-  checkIfInDom(cmp);
   if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
   return cmp;
 };
@@ -219,7 +215,7 @@ const addTemplateChildCmp = (cmp: TCMP) => {
       if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
-      checkIfInDom(replaceWithCmp);
+      if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
     }
   }
 };
@@ -420,7 +416,7 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
   if (cmp.props?.focus) focusCmp(cmp);
   addTemplateChildCmp(cmp);
   runAnims(cmp);
-  if (cmp.props?.onUpdateCmp) cmp.props.onUpdateCmp(cmp);
+  if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
   if (callback) callback(cmp);
   return cmp;
 };
@@ -573,7 +569,7 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
   cmp.timers.cmpAnim = { fn: null, curIndex: 0, animState };
 
   const timerFn = () => {
-    const curIndex = cmp.timers.cmpAnim.curIndex;
+    const curIndex = cmp.timers.cmpAnim.curIndex || 0;
     const curAnim = animChain[curIndex];
 
     let nextIndex: null | number = null;
@@ -581,7 +577,9 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
     // Check previous anim phaseEndFn
     const prevAnim = animChain[curIndex - 1];
     if (prevAnim?.phaseEndFn) {
-      const phaseEndResult = prevAnim.phaseEndFn(cmp, cmp.timers.cmpAnim.animState);
+      const phaseEndResult = cmp.timers.cmpAnim.animState
+        ? prevAnim.phaseEndFn(cmp, cmp.timers.cmpAnim.animState)
+        : null;
       nextIndex = typeof phaseEndResult === 'number' ? phaseEndResult : null;
       if (nextIndex !== null) {
         cmp.timers.cmpAnim.curIndex = nextIndex;
@@ -596,7 +594,9 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
 
     // Check current anim phaseStartFn
     if (curAnim?.phaseStartFn) {
-      const phaseStartResult = curAnim.phaseStartFn(cmp, cmp.timers.cmpAnim.animState);
+      const phaseStartResult = cmp.timers.cmpAnim.animState
+        ? curAnim.phaseStartFn(cmp, cmp.timers.cmpAnim.animState)
+        : null;
       nextIndex = typeof phaseStartResult === 'number' ? phaseStartResult : null;
     }
 
@@ -617,7 +617,8 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
           : curAnim.gotoIndex(cmp, cmp.timers.cmpAnim.animState);
       return;
     }
-    cmp.timers.cmpAnim.curIndex = nextIndex !== null ? nextIndex : cmp.timers.cmpAnim.curIndex + 1;
+    cmp.timers.cmpAnim.curIndex =
+      nextIndex !== null ? nextIndex : (cmp.timers.cmpAnim.curIndex || 0) + 1;
   };
   timerFn();
 
@@ -640,8 +641,23 @@ const blurCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   return cmp;
 };
 
-const scrollCmpIntoView = (cmp: TCMP, params?: boolean | ScrollIntoViewOptions) => {
-  cmp.elem.scrollIntoView(params);
+const scrollCmpIntoView = (
+  cmp: TCMP,
+  params?: boolean | ScrollIntoViewOptions,
+  timeout?: number
+) => {
+  if (timeout !== undefined) {
+    if (cmp.timers.scrollIntoView)
+      clearTimeout(cmp.timers.scrollIntoView.fn as NodeJS.Timeout | undefined);
+    const timer = setTimeout(() => {
+      cmp.elem.scrollIntoView(params);
+      if (cmp.timers.scrollIntoView)
+        clearTimeout(cmp.timers.scrollIntoView.fn as NodeJS.Timeout | undefined);
+    }, timeout);
+    cmp.timers.scrollIntoView = { fn: timer };
+  } else {
+    cmp.elem.scrollIntoView(params);
+  }
   return cmp;
 };
 
@@ -709,28 +725,3 @@ const removeAnims = (cmp: TCMP) => {
 
 const setPropsValue = (cmp: TCMP, props: Partial<TProps>) =>
   (cmp.props = { ...cmp.props, ...props });
-
-const checkIfInDom = (cmp: TCMP) => {
-  if (!globalSettings.doCheckIsInDom || cmp.isInDom) {
-    return;
-  }
-  const checkParentUntilHtml = (elem: HTMLElement): boolean => {
-    if (elem.tagName === 'HTML') return true;
-    if (!elem.parentElement) return false;
-    return checkParentUntilHtml(elem.parentElement);
-  };
-  const isInDom = checkParentUntilHtml(cmp.elem);
-  cmp.isInDom = isInDom;
-  if (isInDom) {
-    const setChildrenIsInDom = (targetCmp: TCMP) => {
-      if (targetCmp.id === 'different') console.log('IN DOM (C)', targetCmp.isInDom, targetCmp);
-      const children = targetCmp.children;
-      for (let i = 0; i < children.length; i++) {
-        children[i].isInDom = true;
-        setChildrenIsInDom(children[i]);
-      }
-    };
-    setChildrenIsInDom(cmp);
-  }
-  if (cmp.id === 'different') console.log('IN DOM', cmp.isInDom, cmp);
-};

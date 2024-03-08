@@ -6,8 +6,9 @@ export const Base = (props: TProps) => {
   const baseCmp = CMP(props);
   baseCmp.add(
     Button({
-      onClick: (cmp) =>
-        cmp.update({ text: 'clicked', tag: 'button' }, (cmp) => console.log('UPDATED', cmp)),
+      onClick: (cmp) => {
+        cmp.update({ text: 'clicked', tag: 'button' }, (cmp) => console.log('UPDATED', cmp));
+      },
       onClickOutside: (cmp) => console.log('UUTSIDAN', cmp),
       onFocus: () => console.log('FOCUS'),
       onBlur: () => console.log('BLUR'),
@@ -45,7 +46,7 @@ export const Base = (props: TProps) => {
   baseCmp.add({
     id: 'scroll-test',
     text: 'HERE IS THE SCROLL TO COMPONENT',
-    onCreateCmp: (cmp) => cmp.scrollIntoView({ behavior: 'smooth' }),
+    // onCreateCmp: (cmp) => cmp.scrollIntoView({ behavior: 'smooth' }, 1000),
   });
 
   baseCmp.add({
@@ -56,9 +57,7 @@ export const Base = (props: TProps) => {
     },
   });
 
-  // setTimeout(() => {
-  //   baseCmp.add({ scrollIntoView: { behavior: 'smooth' } });
-  // }, 2000);
+  // baseCmp.add({ text: 'KUKKUU' }).scrollIntoView({ behavior: 'smooth' }, 2000);
 
   return baseCmp;
 };

@@ -40,7 +40,12 @@ export type TAnimChain = {
   phaseEndFn?: (cmp: TCMP, animState: TAnimState) => void | number;
 };
 
-export type TSettings = { sanitizer: (html: string) => string; sanitizeAll: boolean };
+export type TSettings = {
+  sanitizer?: ((html: string) => string) | null;
+  sanitizeAll?: boolean;
+  doCheckIsInDom?: boolean;
+  replaceRootDom?: boolean;
+};
 
 export type TProps = {
   id?: string;
@@ -73,10 +78,12 @@ export type TCMP = {
   children: TCMP[];
   props?: TProps;
   elem: HTMLElement;
+  parent: TCMP | null;
   parentElem: HTMLElement | null;
   isTemplateCmp?: boolean;
   isRoot?: boolean;
   isCmp: boolean;
+  isInDom?: boolean;
   listeners: { [key: string]: ((e: Event) => void) | null };
   timers: { [key: string]: { fn: unknown; curIndex: number; animState: TAnimState } };
   add: (child?: TCMP | TProps) => TCMP;
@@ -93,8 +100,12 @@ export type TCMP = {
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions | undefined) => TCMP;
 };
 
-let sanitizer: ((html: string) => string) | null = null;
-let sanitizeAll: boolean = false;
+const globalSettings: TSettings = {
+  sanitizer: null,
+  sanitizeAll: false,
+  doCheckIsInDom: false,
+  replaceRootDom: true,
+};
 
 export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   if (props?.attach && rootCMP) {
@@ -103,8 +114,6 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   if (props?.id && cmps[props.id]) {
     throw new Error(`Id is already in use / taken: ${props.id}`);
   }
-  if (settings?.sanitizer) sanitizer = settings.sanitizer;
-  if (settings?.sanitizeAll) sanitizeAll = settings.sanitizeAll;
 
   // Create cmp object
   const cmp: TCMP = {
@@ -112,11 +121,12 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     children: [],
     props,
     elem: null as unknown as HTMLElement,
+    parent: null,
     parentElem: null,
     isCmp: true,
     listeners: {},
     timers: {},
-    add: (child) => addChild(cmp, child),
+    add: (child) => addChildCmp(cmp, child),
     remove: () => removeCmp(cmp),
     update: (newProps, callback) => updateCmp(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
@@ -140,29 +150,40 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
 
   // Check if props have attach and attach to element
   if (props?.attach) {
-    props.attach.appendChild(elem);
+    if (settings?.sanitizer) globalSettings.sanitizer = settings.sanitizer;
+    if (settings?.sanitizeAll) globalSettings.sanitizeAll = settings.sanitizeAll;
+    if (settings?.doCheckIsInDom !== undefined)
+      globalSettings.doCheckIsInDom = settings.doCheckIsInDom;
+    if (settings?.replaceRootDom !== undefined)
+      globalSettings.replaceRootDom = settings.replaceRootDom;
+    if (globalSettings.replaceRootDom) {
+      props.attach.replaceWith(elem);
+    } else {
+      props.attach.appendChild(elem);
+    }
     rootCMP = cmp;
-    cmp.parentElem = props.attach;
+    cmp.parentElem = elem.parentElement;
+    cmp.parent = null;
     cmp.isRoot = true;
     runAnims(cmp);
+    checkIfInDom(cmp);
   }
 
   // Add cmp to list
   cmps[cmp.id] = cmp;
 
   // Check for child <cmp> tags and replace possible tempTemplates
-  updateTemplateChildCmps(cmp);
+  addTemplateChildCmp(cmp);
 
   // Overwrite toString method
   cmp.toString = () => getTempTemplate(cmp.id);
 
-  // Callback for onCreate
-  if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
+  // @TODO: Add onInit()
 
   return cmp;
 };
 
-const addChild = (parent: TCMP, child?: TCMP | TProps) => {
+const addChildCmp = (parent: TCMP, child?: TCMP | TProps) => {
   let cmp;
   if (!child) {
     cmp = CMP();
@@ -174,10 +195,33 @@ const addChild = (parent: TCMP, child?: TCMP | TProps) => {
 
   parent.children.push(cmp);
   parent.elem.appendChild(cmp.elem);
+  cmp.parent = parent;
   cmp.parentElem = parent.elem;
   if (cmp.props?.focus) focusCmp(cmp);
   runAnims(cmp);
+  checkIfInDom(cmp);
+  if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
   return cmp;
+};
+
+const addTemplateChildCmp = (cmp: TCMP) => {
+  const childCmpElems = cmp.elem.querySelectorAll('cmp');
+  for (let i = 0; i < childCmpElems.length; i++) {
+    const id = childCmpElems[i].getAttribute('id');
+    if (id && childCmpElems[i].outerHTML === getTempTemplate(id)) {
+      const replaceWithCmp = cmps[id];
+      if (!replaceWithCmp)
+        throw new Error(`The replaceWithCmp not found in cmps list (in parent cmp: ${cmp.id})`);
+      childCmpElems[i].replaceWith(replaceWithCmp.elem);
+      replaceWithCmp.isTemplateCmp = true;
+      replaceWithCmp.parent = cmp;
+      replaceWithCmp.parentElem = cmp.elem;
+      if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
+      cmp.children.push(replaceWithCmp);
+      runAnims(replaceWithCmp);
+      checkIfInDom(replaceWithCmp);
+    }
+  }
 };
 
 export const getCmpById = (id: string): TCMP | null => cmps[id] || null;
@@ -192,7 +236,9 @@ const createElem = (cmp: TCMP, props?: TProps) => {
     const template = document.createElement('template');
     const rawHtml = typeof props.html === 'string' ? props.html : props.html(cmp);
     template.innerHTML =
-      (props.sanitize || sanitizeAll) && sanitizer ? sanitizer(rawHtml) : rawHtml;
+      (props.sanitize || globalSettings.sanitizeAll) && globalSettings.sanitizer
+        ? globalSettings.sanitizer(rawHtml)
+        : rawHtml;
     elem = template.content.children[0] as HTMLElement;
     setPropsValue(cmp, { tag: elem.tagName.toLowerCase() });
   } else {
@@ -372,29 +418,11 @@ const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void)
     cmp.add(keepAddedChildren[i]);
   }
   if (cmp.props?.focus) focusCmp(cmp);
-  updateTemplateChildCmps(cmp);
+  addTemplateChildCmp(cmp);
   runAnims(cmp);
   if (cmp.props?.onUpdateCmp) cmp.props.onUpdateCmp(cmp);
   if (callback) callback(cmp);
   return cmp;
-};
-
-const updateTemplateChildCmps = (cmp: TCMP) => {
-  const childCmpElems = cmp.elem.querySelectorAll('cmp');
-  for (let i = 0; i < childCmpElems.length; i++) {
-    const id = childCmpElems[i].getAttribute('id');
-    if (id && childCmpElems[i].outerHTML === getTempTemplate(id)) {
-      const replaceWithCmp = cmps[id];
-      if (!replaceWithCmp)
-        throw new Error(`The replaceWithCmp not found in cmps list (in parent cmp: ${cmp.id})`);
-      childCmpElems[i].replaceWith(replaceWithCmp.elem);
-      replaceWithCmp.isTemplateCmp = true;
-      replaceWithCmp.parentElem = cmp.elem;
-      if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
-      cmp.children.push(replaceWithCmp);
-      runAnims(replaceWithCmp);
-    }
-  }
 };
 
 const updateCmpClass = (
@@ -681,3 +709,28 @@ const removeAnims = (cmp: TCMP) => {
 
 const setPropsValue = (cmp: TCMP, props: Partial<TProps>) =>
   (cmp.props = { ...cmp.props, ...props });
+
+const checkIfInDom = (cmp: TCMP) => {
+  if (!globalSettings.doCheckIsInDom || cmp.isInDom) {
+    return;
+  }
+  const checkParentUntilHtml = (elem: HTMLElement): boolean => {
+    if (elem.tagName === 'HTML') return true;
+    if (!elem.parentElement) return false;
+    return checkParentUntilHtml(elem.parentElement);
+  };
+  const isInDom = checkParentUntilHtml(cmp.elem);
+  cmp.isInDom = isInDom;
+  if (isInDom) {
+    const setChildrenIsInDom = (targetCmp: TCMP) => {
+      if (targetCmp.id === 'different') console.log('IN DOM (C)', targetCmp.isInDom, targetCmp);
+      const children = targetCmp.children;
+      for (let i = 0; i < children.length; i++) {
+        children[i].isInDom = true;
+        setChildrenIsInDom(children[i]);
+      }
+    };
+    setChildrenIsInDom(cmp);
+  }
+  if (cmp.id === 'different') console.log('IN DOM', cmp.isInDom, cmp);
+};

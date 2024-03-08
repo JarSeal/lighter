@@ -37,10 +37,6 @@ export const Base = (props: TProps) => {
       label: {
         html: `<span>My input label and ${CMP({ text: 'CMP', id: 'TUUT', idAttr: true })}</span>`,
       },
-      input: {
-        onFocus: () => console.log('FOCUSTHISSHIT'),
-      },
-      type: 'password',
       value: 'SKKFSJAKJF',
     })
   );

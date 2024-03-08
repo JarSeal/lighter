@@ -6,19 +6,19 @@ export type TInputText = {
   label?: string | TProps;
   input?: TProps;
   value?: string;
-  type?: TInputType;
+  disabled?: boolean;
 };
 
-type TInputType = 'text' | 'password';
-
 type TAttr = {
-  type?: TInputType;
+  type?: 'text' | 'password';
   value?: string;
+  disabled?: string;
 };
 
 export const InputText = (props?: TInputText) => {
   const id = props?.id ? props.id : createNewId();
 
+  // Label
   const label = props?.label
     ? `<span>${
         typeof props.label === 'string'
@@ -30,6 +30,7 @@ export const InputText = (props?: TInputText) => {
       }</span>`
     : '';
 
+  // Input attributes
   const inputAttr: TAttr = {};
   if (props?.isPassword) {
     inputAttr.type = 'password';
@@ -37,6 +38,7 @@ export const InputText = (props?: TInputText) => {
     inputAttr.type = 'text';
   }
   inputAttr.value = props?.value || '';
+  if (props?.disabled) inputAttr.disabled = 'true';
 
   const getHtml = () =>
     `<label for="${id}">

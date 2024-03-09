@@ -34,6 +34,7 @@ export const Base = (props: TProps) => {
 
   baseCmp.add(
     InputText({
+      labelTag: '',
       label: {
         html: `<span>My input label and ${CMP({ text: 'CMP', id: 'TUUT', idAttr: true })}</span>`,
       },

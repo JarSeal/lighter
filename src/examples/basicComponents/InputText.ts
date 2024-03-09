@@ -1,4 +1,4 @@
-import { CMP, createNewId, type TProps } from '../../Lighter/CMP';
+import { CMP, createNewId, type TListener, type TProps } from '../../Lighter/CMP';
 
 export type TInputText = {
   // Id attribute to be used for the "for" attribute
@@ -27,6 +27,12 @@ export type TInputText = {
   // Whether the input element has a disabled
   // attribute or not.
   disabled?: boolean;
+
+  // The input fields change listener
+  onChange?: TListener;
+
+  // The input fields input listener
+  onInput?: TListener;
 };
 
 type TInputAttr = {
@@ -74,7 +80,15 @@ export const InputText = (props?: TInputText) => {
   const getHtml = () =>
     `<label for="${id}">
       ${label}
-      ${CMP({ ...props?.input, tag: 'input', id, idAttr: true, attr: inputAttr })}
+      ${CMP({
+        ...props?.input,
+        tag: 'input',
+        id,
+        idAttr: true,
+        attr: inputAttr,
+        ...(props?.onChange ? { onChange: props.onChange } : {}),
+        ...(props?.onInput ? { onInput: props.onInput } : {}),
+      })}
     </label>`;
 
   const inputCmp = CMP({ html: getHtml() });

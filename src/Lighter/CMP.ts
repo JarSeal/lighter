@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 let rootCMP: TCMP | null = null;
 const cmps: { [key: string]: TCMP } = {};
 
-export type TListener = (cmp: TCMP, e: Event) => void;
+export type TListener = (cmp: TCMP, e: Event | InputEvent) => void;
 
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 

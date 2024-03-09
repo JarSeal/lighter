@@ -39,6 +39,14 @@ export const Base = (props: TProps) => {
         html: `<span>My input label and ${CMP({ text: 'CMP', id: 'TUUT', idAttr: true })}</span>`,
       },
       value: 'SKKFSJAKJF',
+      onChange: (_, e) => {
+        const target = e.target as HTMLInputElement;
+        console.log('onChange', target?.value);
+      },
+      onInput: (_, e) => {
+        const target = e.target as HTMLInputElement;
+        console.log('onInput', target?.value);
+      },
     })
   );
 

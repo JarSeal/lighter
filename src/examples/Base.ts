@@ -49,6 +49,7 @@ export const Base = (props?: TProps) => {
             idAttr: true,
           })}</span>`,
       },
+      placeholder: 'Put something here',
       value: 'error',
       // onChange: (cmp, e) => {
       //   const target = e.target as HTMLInputElement;

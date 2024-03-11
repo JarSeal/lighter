@@ -78,7 +78,6 @@ export type TInputText = {
   // Regex pattern for the input field.
   pattern?: string;
 
-  // @TODO
   // Placeholder text for empty input field.
   placeholder?: string;
 };
@@ -88,6 +87,7 @@ type TInputAttr = {
   value?: string;
   disabled?: string;
   maxlength?: number;
+  placeholder?: string;
 };
 
 export const InputText = (props?: TInputText) => {
@@ -126,6 +126,7 @@ export const InputText = (props?: TInputText) => {
   inputAttr.value = props?.value || '';
   if (props?.disabled) inputAttr.disabled = 'true';
   if (props?.maxLength) inputAttr.maxlength = props.maxLength;
+  if (props?.placeholder) inputAttr.placeholder = props.placeholder;
 
   // Validation
   const validate = (value?: string) => {

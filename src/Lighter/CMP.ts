@@ -5,6 +5,18 @@ const cmps: { [key: string]: TCMP } = {};
 
 export type TListener = (cmp: TCMP, e: Event | InputEvent) => void;
 
+export type TListenerCreator = {
+  type: string;
+  fn: ((cmp: TCMP, e: Event) => void) | null;
+  options?: AddEventListenerOptions;
+};
+
+export type TListenerCache = {
+  type: string;
+  fn: ((e: Event) => void) | null;
+  options?: AddEventListenerOptions;
+};
+
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
 export type TAnimClass = {
@@ -70,7 +82,7 @@ export type TProps = {
   onChange?: TListener;
   onCreateCmp?: (cmp: TCMP) => void;
   onRemoveCmp?: (cmp: TCMP) => void;
-  listeners?: { type: string; fn: TListener }[];
+  listeners?: TListenerCreator[];
   focus?: boolean;
 };
 
@@ -84,10 +96,11 @@ export type TCMP = {
   isTemplateCmp?: boolean;
   isRoot?: boolean;
   isCmp: boolean;
-  listeners: { [key: string]: ((e: Event) => void) | null };
+  listeners: { [key: string]: TListenerCache | null };
   timers: { [key: string]: { fn: unknown; curIndex?: number; animState?: TAnimState } };
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
+  removeChildren: () => TCMP;
   update: (newProps?: { [key: string]: unknown }, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   updateAttr: (newAttr: TAttr) => TCMP;
@@ -134,6 +147,7 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     timers: {},
     add: (child) => addChildCmp(cmp, child),
     remove: () => removeCmp(cmp),
+    removeChildren: () => removeCmpChildren(cmp),
     update: (newProps, callback) => updateCmp(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
@@ -254,6 +268,19 @@ const createElem = (cmp: TCMP, props?: TProps) => {
         ? globalSettings.sanitizer(rawHtml)
         : rawHtml;
     elem = template.content.children[0] as HTMLElement;
+    // Check if element is a <cmp> element and replace it with the actual CMP,
+    // this is achieved when the props have this: { html: () => `CMP({ text: something })` }
+    if (elem.outerHTML.startsWith('<cmp')) {
+      const cmpId = elem.getAttribute('id');
+      if (cmpId) {
+        const replaceWithCmp = cmps[cmpId];
+        if (replaceWithCmp?.elem) {
+          elem = replaceWithCmp.elem;
+          cmp.children.push(replaceWithCmp);
+          replaceWithCmp.parent = cmp;
+        }
+      }
+    }
     setPropsValue(cmp, { tag: elem.tagName.toLowerCase() });
   } else {
     elem = document.createElement(props?.tag ? props.tag : 'div') as HTMLElement;
@@ -307,7 +334,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add "click" listener
     const onClick = props.onClick;
     const fn = (e: Event) => onClick(cmp, e);
-    listeners.click = fn;
+    listeners.click = { fn, type: 'click' };
     cmp.elem.addEventListener('click', fn, true);
   } else {
     if (listeners.click || listeners.click === null) delete listeners.click;
@@ -318,7 +345,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add "mousemove" listener
     const onHover = props.onHover;
     const fn = (e: Event) => onHover(cmp, e);
-    listeners.mousemove = fn;
+    listeners.mousemove = { fn, type: 'mousemove' };
     cmp.elem.addEventListener('mousemove', fn, true);
   } else {
     if (listeners.mousemove || listeners.mousemove === null) delete listeners.mousemove;
@@ -327,7 +354,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add "focus" listener
     const onFocus = props.onFocus;
     const fn = (e: Event) => onFocus(cmp, e);
-    listeners.focus = fn;
+    listeners.focus = { fn, type: 'focus' };
     cmp.elem.addEventListener('focus', fn, true);
   } else {
     if (listeners.focus || listeners.focus === null) delete listeners.focus;
@@ -336,7 +363,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add "blur" listener
     const onBlur = props.onBlur;
     const fn = (e: Event) => onBlur(cmp, e);
-    listeners.blur = fn;
+    listeners.blur = { fn, type: 'blur' };
     cmp.elem.addEventListener('blur', fn, true);
   } else {
     if (listeners.blur || listeners.blur === null) delete listeners.blur;
@@ -345,7 +372,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add "input" listener
     const onInput = props.onInput;
     const fn = (e: Event) => onInput(cmp, e);
-    listeners.input = fn;
+    listeners.input = { fn, type: 'input' };
     cmp.elem.addEventListener('input', fn, true);
   } else {
     if (listeners.input || listeners.input === null) delete listeners.input;
@@ -354,7 +381,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add "change" listener
     const onChange = props.onChange;
     const fn = (e: Event) => onChange(cmp, e);
-    listeners.change = fn;
+    listeners.change = { fn, type: 'change' };
     cmp.elem.addEventListener('change', fn, true);
   } else {
     if (listeners.change || listeners.change === null) delete listeners.change;
@@ -363,9 +390,14 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     // Add custom listeners
     for (let i = 0; i < props.listeners.length; i++) {
       const listenerFn = props.listeners[i].fn;
+      if (!listenerFn) continue;
       const fn = (e: Event) => listenerFn(cmp, e);
       const type = props.listeners[i].type;
-      listeners[type] = fn;
+      listeners[type] = {
+        fn,
+        type,
+        ...(props.listeners[i].options ? { options: props.listeners[i].options } : {}),
+      };
       cmp.elem.addEventListener(type, fn, true);
     }
   }
@@ -379,8 +411,8 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   // Remove possiple listeners
   for (let i = 0; i < keys.length; i++) {
     const listener = listeners[keys[i]];
-    if (listener) {
-      cmp.elem.removeEventListener(keys[i], listener, true);
+    if (listener?.fn) {
+      cmp.elem.removeEventListener(keys[i], listener.fn, true);
       if (nullify) listeners[keys[i]] = null;
     }
   }
@@ -403,6 +435,14 @@ const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
 
   if (cmp.props?.onRemoveCmp) cmp.props.onRemoveCmp(cmp);
 
+  return cmp;
+};
+
+const removeCmpChildren = (cmp: TCMP) => {
+  const children = cmp.children;
+  for (let i = 0; i < children.length; i++) {
+    children[i].remove();
+  }
   return cmp;
 };
 

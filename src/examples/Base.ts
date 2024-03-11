@@ -7,6 +7,7 @@ export const Base = (props?: TProps) => {
   const baseCmp = CMP({ ...props, wrapper: (props) => Base(props), wrapperProps: props });
   baseCmp.add(
     Button({
+      id: 'clickidi-button',
       onClick: (cmp) => {
         cmp.update({ text: 'clicked', tag: 'button', onClickOutside: undefined }, (cmp) =>
           console.log('UPDATED', cmp)
@@ -34,34 +35,50 @@ export const Base = (props?: TProps) => {
   });
   const showInputCmp = baseCmp.add();
 
-  const labelHtml = () =>
-    `<span>My input label and ${CMP({
-      text: 'CMP',
-      id: 'TUUT',
-      idAttr: true,
-    })}</span>`;
-  const inputTextCmp = baseCmp.add(
+  baseCmp.add(
     InputText({
+      idAttr: true,
       labelTag: '',
       label: {
-        html: labelHtml,
+        html: () =>
+          `<span>My input label and ${CMP({
+            text: 'CMP',
+            id: 'TUUT',
+            idAttr: true,
+          })}</span>`,
       },
-      value: 'test',
-      onChange: (cmp, e) => {
-        const target = e.target as HTMLInputElement;
-        if (target?.value !== 'reset') {
-          const newCmp = cmp.update({ value: target?.value });
-          console.log('onChange2', newCmp.props?.wrapperProps?.value);
+      value: 'error',
+      // onChange: (cmp, e) => {
+      //   const target = e.target as HTMLInputElement;
+      //   if (target?.value !== 'reset') {
+      //     const newCmp = cmp.update({ value: target?.value });
+      //     console.log('onChange2', newCmp.props?.wrapperProps?.value);
+      //   }
+      // },
+      // onInput: (cmp, e) => {
+      //   const target = e.target as HTMLInputElement;
+      //   const newCmp = cmp.update({ value: target?.value, focus: true });
+      //   console.log('onInput', target?.value, newCmp.props?.wrapperProps);
+      //   if (target?.value === 'reset') {
+      //     baseCmp.update();
+      //   }
+      // },
+      validationFn: (value) => {
+        if (value === 'error') return 'Hei hei hei!';
+        if (value === 'button') {
+          return {
+            id: 'testTemplate',
+            html: () => `${Button({ text: 'Here is a button' })}`,
+          };
         }
+        if (!value) return { html: '<button>Required</button>' };
+        return null;
       },
-      onInput: (cmp, e) => {
-        const target = e.target as HTMLInputElement;
-        const newCmp = cmp.update({ value: target?.value, focus: true });
-        console.log('onInput', target?.value, newCmp.props?.wrapperProps);
-        if (target?.value === 'reset') {
-          baseCmp.update();
-        }
-      },
+      // blurOnEnter: true,
+      blurOnEsc: true,
+      focusToNextOnEnter: 'text-input',
+      focusToPrevOnShiftEnter: 'clickidi-button',
+      maxLength: 6,
     })
   );
 

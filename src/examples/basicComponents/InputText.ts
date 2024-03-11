@@ -1,8 +1,8 @@
-import { CMP, createNewId, type TListener, type TProps } from '../../Lighter/CMP';
+import { CMP, createNewId, TCMP, type TListener, type TProps } from '../../Lighter/CMP';
 
 export type TInputText = {
   // Id attribute to be used for the "for" attribute
-  // in label and for the input element (will show)
+  // in label and for the input element ID (will show)
   id?: string;
 
   // Whether the type of the input attribute is
@@ -15,7 +15,7 @@ export type TInputText = {
 
   // Whether the label has a wrapping element
   // or not (defined by an empty string: '').
-  // Default is a span element.
+  // Default is 'span'.
   labelTag?: string;
 
   // Input sub component props.
@@ -33,6 +33,28 @@ export type TInputText = {
 
   // The input fields input listener
   onInput?: TListener;
+
+  // @TODO
+  // Whether to lose the focus of the input field
+  // on Enter key press. Default false.
+  blurOnEnter?: boolean;
+
+  // @TODO
+  // Whether to set focus to the next input elem
+  // in DOM on Enter key press. It can be given
+  // a boolean or the ID of the next elem. Default false.
+  focusToNextOnEnter?: boolean | string;
+
+  // @TODO
+  // Shows an error msg for the input and adds
+  // an error class to the CMP. If msg is undefined,
+  // null, or an empty string, then only the error
+  // class is added.
+  showError?: (msg?: string | TProps | null) => void;
+
+  // @TODO
+  // Removes the error class and the possible error msg.
+  removeError?: () => void;
 };
 
 type TInputAttr = {
@@ -42,7 +64,7 @@ type TInputAttr = {
 };
 
 export const InputText = (props?: TInputText) => {
-  const id = props?.id ? props.id : createNewId();
+  const inputId = `input_${createNewId()}`;
 
   // Label
   let labelStartTag = '<span>';
@@ -61,6 +83,7 @@ export const InputText = (props?: TInputText) => {
         typeof props.label === 'string'
           ? props.label
           : CMP({
+              id: 'WRAP',
               tag: 'span',
               ...props.label,
             })
@@ -78,22 +101,26 @@ export const InputText = (props?: TInputText) => {
   if (props?.disabled) inputAttr.disabled = 'true';
 
   const getHtml = () =>
-    `<label for="${id}">
+    `<label for="${inputId}">
       ${label}
       ${CMP({
         ...props?.input,
         tag: 'input',
-        id,
+        id: inputId,
         idAttr: true,
         attr: inputAttr,
-        ...(props?.onChange ? { onChange: props.onChange } : {}),
-        ...(props?.onInput ? { onInput: props.onInput } : {}),
+        ...{ onChange: (_, e) => props?.onChange && props.onChange(inputTextCmp, e) },
+        ...{ onInput: (_, e) => props?.onInput && props.onInput(inputTextCmp, e) },
       })}
     </label>`;
 
-  const inputCmp = CMP({ html: getHtml() });
+  const inputTextCmp = CMP({
+    id: 'input-text-cmp',
+    idAttr: true,
+    html: getHtml,
+    wrapper: (props?: TInputText) => InputText(props),
+    wrapperProps: props,
+  });
 
-  console.log('TESTING INPUT', inputCmp);
-
-  return inputCmp;
+  return inputTextCmp;
 };

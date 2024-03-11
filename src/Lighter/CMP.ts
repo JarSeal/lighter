@@ -51,6 +51,8 @@ export type TProps = {
   id?: string;
   idAttr?: boolean;
   attach?: HTMLElement;
+  wrapper?: (props?: { [key: string]: unknown }) => TCMP;
+  wrapperProps?: { [key: string]: unknown };
   text?: string;
   tag?: string;
   html?: string | ((cmp: TCMP) => string);
@@ -86,7 +88,7 @@ export type TCMP = {
   timers: { [key: string]: { fn: unknown; curIndex?: number; animState?: TAnimState } };
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
-  update: (newProps?: TProps, callback?: (cmp: TCMP) => void) => TCMP;
+  update: (newProps?: { [key: string]: unknown }, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   updateAttr: (newAttr: TAttr) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
@@ -181,8 +183,6 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
   // Overwrite toString method
   cmp.toString = () => getTempTemplate(cmp.id);
 
-  // @TODO: Add onInit()
-
   return cmp;
 };
 
@@ -212,8 +212,11 @@ const addTemplateChildCmp = (cmp: TCMP) => {
     const id = childCmpElems[i].getAttribute('id');
     if (id && childCmpElems[i].outerHTML === getTempTemplate(id)) {
       const replaceWithCmp = cmps[id];
-      if (!replaceWithCmp)
-        throw new Error(`The replaceWithCmp not found in cmps list (in parent cmp: ${cmp.id})`);
+      if (!replaceWithCmp) {
+        throw new Error(
+          `The replaceWithCmp not found in cmps list (parent cmp: ${cmp.id}, replaceWithCmp id: ${id})`
+        );
+      }
       childCmpElems[i].replaceWith(replaceWithCmp.elem);
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parent = cmp;
@@ -228,15 +231,20 @@ const addTemplateChildCmp = (cmp: TCMP) => {
 
 export const getCmpById = (id: string): TCMP | null => cmps[id] || null;
 
-export const createNewId = () => uuidv4();
+export const createNewId = () => `c-${uuidv4()}`;
 
-const getTempTemplate = (id: string) => `<cmp id="${id}"></cmp>`;
+const getTempTemplate = (id: string, tag: string = 'cmp') => `<${tag} id="${id}"></${tag}>`;
 
 const createElem = (cmp: TCMP, props?: TProps) => {
   let elem;
 
   // Elem and content
   if (props?.html) {
+    if (typeof props.html === 'string' && props.html.includes('</cmp>')) {
+      throw new Error(
+        'CMP html prop must be a function definition when it has inline CMPs defined (now it is a string). For example: \n\nconst html = () => `Icon ${Icon()}`;\nconst myComponent = CMP({ html }});\n'
+      );
+    }
     const template = document.createElement('template');
     const rawHtml = typeof props.html === 'string' ? props.html : props.html(cmp);
     template.innerHTML =
@@ -378,7 +386,7 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
   if (cmp.props?.onClickOutside) removeOutsideClickListener(cmp);
 };
 
-const removeCmp = (cmp: TCMP) => {
+const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
   // Check children
   for (let i = 0; i < cmp.children.length; i++) {
     const child = cmp.children[i];
@@ -388,7 +396,7 @@ const removeCmp = (cmp: TCMP) => {
   // Remove elem from dom and cmps
   removeListeners(cmp, true);
   removeAnims(cmp);
-  cmp.elem.remove();
+  if (!doNotRemoveElem) cmp.elem.remove();
   delete cmps[cmp.id];
 
   if (cmp.props?.onRemoveCmp) cmp.props.onRemoveCmp(cmp);
@@ -396,27 +404,52 @@ const removeCmp = (cmp: TCMP) => {
   return cmp;
 };
 
-const updateCmp = (cmp: TCMP, newProps?: TProps, callback?: (cmp: TCMP) => void) => {
-  cmp.props = newProps;
-  const elem = createElem(cmp, newProps);
-  cmp.elem.replaceWith(elem);
-  cmp.elem = elem;
-  const listeners = createListeners(cmp, newProps);
-  cmp.listeners = listeners;
-  // Remove old templateCmp children and added children
-  const keepAddedChildren = [];
-  for (let i = 0; i < cmp.children.length; i++) {
-    const child = cmp.children[i];
-    if (!child.isTemplateCmp) {
-      keepAddedChildren.push(child);
+const updateCmp = (
+  cmp: TCMP,
+  newProps?: { [key: string]: unknown },
+  callback?: (cmp: TCMP) => void
+) => {
+  if (cmp.props?.wrapper) {
+    // Wrapper component type
+    if (cmp.props.attach) rootCMP = null;
+    removeCmp(cmp, true);
+    const template = document.createElement('template');
+    template.innerHTML = getTempTemplate(cmp.id, 'cmpw');
+    const tempElem = template.content.children[0] as HTMLElement;
+    cmp.elem.replaceWith(tempElem);
+    const wrapperProps = {
+      ...(cmp.props?.wrapperProps ? cmp.props.wrapperProps : {}),
+      ...newProps,
+    };
+    const newCmp = cmp.props.wrapper(wrapperProps);
+    if (cmp.props.attach) rootCMP = newCmp;
+    newCmp.id = cmp.id;
+    cmp = newCmp;
+    cmps[cmp.id] = newCmp;
+    tempElem.replaceWith(newCmp.elem);
+  } else {
+    // Added or template compoentn types
+    cmp.props = { ...cmp.props, ...newProps };
+    const elem = createElem(cmp, cmp.props);
+    cmp.elem.replaceWith(elem);
+    cmp.elem = elem;
+    // Remove old templateCmp children and added children
+    const keepAddedChildren = [];
+    for (let i = 0; i < cmp.children.length; i++) {
+      const child = cmp.children[i];
+      if (!child.isTemplateCmp) {
+        keepAddedChildren.push(child);
+      }
+      child.remove();
     }
-    child.remove();
+    cmp.children = [];
+    // Add added children
+    for (let i = 0; i < keepAddedChildren.length; i++) {
+      cmp.add(keepAddedChildren[i]);
+    }
   }
-  cmp.children = [];
-  // Add added children
-  for (let i = 0; i < keepAddedChildren.length; i++) {
-    cmp.add(keepAddedChildren[i]);
-  }
+  const listeners = createListeners(cmp, cmp.props);
+  cmp.listeners = listeners;
   if (cmp.props?.focus) focusCmp(cmp);
   addTemplateChildCmp(cmp);
   runAnims(cmp);

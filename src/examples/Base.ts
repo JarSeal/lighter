@@ -3,12 +3,15 @@ import { Button } from './basicComponents/Button';
 import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
 
-export const Base = (props: TProps) => {
-  const baseCmp = CMP(props);
+export const Base = (props?: TProps) => {
+  const baseCmp = CMP({ ...props, wrapper: (props) => Base(props), wrapperProps: props });
   baseCmp.add(
     Button({
       onClick: (cmp) => {
-        cmp.update({ text: 'clicked', tag: 'button' }, (cmp) => console.log('UPDATED', cmp));
+        cmp.update({ text: 'clicked', tag: 'button', onClickOutside: undefined }, (cmp) =>
+          console.log('UPDATED', cmp)
+        );
+        nav.update();
       },
       onClickOutside: (cmp) => console.log('UUTSIDAN', cmp),
       onFocus: () => console.log('FOCUS'),
@@ -18,7 +21,7 @@ export const Base = (props: TProps) => {
     })
   );
 
-  baseCmp.add(Nav());
+  const nav = baseCmp.add(Nav());
 
   baseCmp.add({
     id: 'text-input',
@@ -28,24 +31,34 @@ export const Base = (props: TProps) => {
       const target = e.currentTarget as HTMLInputElement;
       showInputCmp.update({ text: target.value });
     },
-    onFocus: () => console.log('FOCUS'),
   });
   const showInputCmp = baseCmp.add();
 
-  baseCmp.add(
+  const labelHtml = () =>
+    `<span>My input label and ${CMP({
+      text: 'CMP',
+      id: 'TUUT',
+      idAttr: true,
+    })}</span>`;
+  const inputTextCmp = baseCmp.add(
     InputText({
       labelTag: '',
       label: {
-        html: `<span>My input label and ${CMP({ text: 'CMP', id: 'TUUT', idAttr: true })}</span>`,
+        html: labelHtml,
       },
-      value: 'SKKFSJAKJF',
       onChange: (_, e) => {
         const target = e.target as HTMLInputElement;
         console.log('onChange', target?.value);
+        if (target?.value !== 'reset') {
+          inputTextCmp.update({ value: target?.value });
+        }
       },
-      onInput: (_, e) => {
+      onInput: (inputTextCmp, e) => {
         const target = e.target as HTMLInputElement;
-        console.log('onInput', target?.value);
+        console.log('onInput', target?.value, inputTextCmp.props?.wrapperProps);
+        if (target?.value === 'reset') {
+          baseCmp.update();
+        }
       },
     })
   );
@@ -75,8 +88,6 @@ export const Base = (props: TProps) => {
       scrollTestCmp?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     },
   });
-
-  // baseCmp.add({ text: 'KUKKUU' }).scrollIntoView({ behavior: 'smooth' }, 2000);
 
   return baseCmp;
 };

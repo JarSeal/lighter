@@ -54,9 +54,10 @@ export const Base = (props?: TProps) => {
           console.log('onChange2', newCmp.props?.wrapperProps?.value);
         }
       },
-      onInput: (_, e) => {
+      onInput: (cmp, e) => {
         const target = e.target as HTMLInputElement;
-        console.log('onInput', target?.value, inputTextCmp.props?.wrapperProps);
+        const newCmp = cmp.update({ value: target?.value, focus: true });
+        console.log('onInput', target?.value, newCmp.props?.wrapperProps);
         if (target?.value === 'reset') {
           baseCmp.update();
         }

@@ -427,7 +427,7 @@ const updateCmp = (
     if (newCmp.props) {
       newCmp.props.wrapperProps = wrapperProps;
     } else {
-      newCmp.props = { wrapperProps };
+      newCmp.props = wrapperProps;
     }
     if (cmp.props.attach) rootCMP = newCmp;
     newCmp.id = cmp.id;
@@ -652,6 +652,9 @@ const updateCmpAnim = (cmp: TCMP, animChain: TAnimChain[]) => {
 
 const focusCmp = (cmp: TCMP, focusValueToProps?: boolean) => {
   cmp.elem.focus();
+  if (cmp.elem instanceof HTMLInputElement) {
+    cmp.elem.setSelectionRange(9999999999999, 9999999999999);
+  }
   if (focusValueToProps !== undefined) {
     setPropsValue(cmp, { focus: focusValueToProps });
   }

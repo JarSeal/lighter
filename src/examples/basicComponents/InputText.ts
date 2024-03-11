@@ -38,6 +38,14 @@ export type TInputText = {
   focus?: boolean;
 
   // @TODO
+  // Minimum length forced by the component
+  minLength?: number;
+
+  // @TODO
+  // Maximum length forced by the component
+  maxLength?: number;
+
+  // @TODO
   // Whether to lose the focus of the input field
   // on Enter key press. Default false.
   blurOnEnter?: boolean;

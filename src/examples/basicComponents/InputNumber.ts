@@ -10,11 +10,11 @@ import {
 
 export type TInputNumber = {
   // Id attribute to be used for the "for" attribute
-  // in label and for the input element ID (will show)
+  // in label and for the input element ID (will show in DOM).
   id?: string;
 
   // Whether to add the for="id" attribute and the
-  // input's id attribute to the elements
+  // input's id attribute to the elements.
   idAttr?: boolean;
 
   // Label can either be a string (just text) or
@@ -29,27 +29,56 @@ export type TInputNumber = {
   // Input sub component props.
   input?: TProps;
 
-  // Input value
+  // Input value.
   value?: number;
+
+  // Step value for using arrow keys and up/down buttons.
+  step?: number;
+
+  // @TODO
+  // Step value for using arrow keys and up/down buttons
+  // but when the shift is pressed.
+  stepShift?: number;
+
+  // @TODO
+  // Maximum precision decimals accepted before
+  // the value is rounded.
+  maxPrecision?: number;
+
+  // @TODO
+  // Normalize precision to every value, so that
+  // the values are always on the same precision.
+  normalizePrecision?: boolean;
+
+  // @TODO
+  // Minimun value for the input field. Must be
+  // greater than the possible maxValue.
+  minValue?: number;
+
+  // @TODO
+  // Maximum value for the input field. Must be
+  // less than the possible minValue.
+  maxValue?: number;
 
   // Whether the input element has a disabled
   // attribute or not.
   disabled?: boolean;
 
-  // The input fields change listener
+  // The input field change listener.
   onChange?: TListener;
 
-  // The input fields input listener
+  // The input field input listener.
   onInput?: TListener;
 
-  // Input field's listeners
+  // @TODO
+  // The input field focus listener.
+  onFocus?: TListener;
+
+  // Input field's listeners.
   listeners?: TListenerCreator[];
 
-  // Whether the input should have focus
+  // Whether the input should have focus.
   focus?: boolean;
-
-  // Maximum length forced by the component
-  // maxLength?: number;
 
   // Whether to lose the focus of the input field
   // on Enter/Esc key press. Default false.
@@ -69,11 +98,21 @@ export type TInputNumber = {
   // and creates the error CMP with the message
   // (with an empty string, only the class is added).
   validationFn?: (value: number | undefined, cmp: TCMP) => string | TProps | null;
+
+  // @TODO
+  // Regex pattern for the input field.
+  pattern?: string;
+
+  // @TODO
+  // Placeholder text for empty input field.
+  placeholder?: string;
 };
 
 type TInputAttr = {
+  type: 'number';
   value?: number;
   disabled?: string;
+  step?: number;
 };
 
 export const InputNumber = (props?: TInputNumber) => {
@@ -103,9 +142,10 @@ export const InputNumber = (props?: TInputNumber) => {
     : '';
 
   // Input attributes
-  const inputAttr: TInputAttr = {};
+  const inputAttr: TInputAttr = { type: 'number' };
   inputAttr.value = props?.value || 0;
   if (props?.disabled) inputAttr.disabled = 'true';
+  if (props?.step !== undefined) inputAttr.step = props.step;
 
   // Validation
   const validate = (value?: number) => {
@@ -172,26 +212,25 @@ export const InputNumber = (props?: TInputNumber) => {
         idAttr: props?.idAttr,
         attr: inputAttr,
         focus: props?.focus,
-        ...(props?.onChange || props?.validationFn
-          ? {
-              onChange: (_, e) => {
-                if (props.validationFn) {
-                  const value = Number((e.target as HTMLInputElement).value);
-                  validate(value);
-                }
-                props.onChange && props.onChange(inputNumberCmp, e);
-              },
-            }
-          : {}),
+        onChange: (_, e) => {
+          const value = Number((e.target as HTMLInputElement).value);
+          if (props?.validationFn) validate(value);
+          props?.onChange && props.onChange(inputNumberCmp, e);
+          if (inputNumberCmp.props?.wrapperProps) {
+            inputNumberCmp.props.wrapperProps.value = value;
+          }
+          const inputCpm = getCmpById(inputId);
+          if (inputCpm) inputCpm.updateAttr({ value });
+        },
         onInput: (_, e) => {
           const value = Number((e.target as HTMLInputElement).value);
-          if (props?.validationFn) {
-            validate(value);
-          }
+          if (props?.validationFn) validate(value);
           props?.onInput && props.onInput(inputNumberCmp, e);
           if (inputNumberCmp.props?.wrapperProps) {
             inputNumberCmp.props.wrapperProps.value = value;
           }
+          const inputCpm = getCmpById(inputId);
+          if (inputCpm) inputCpm.updateAttr({ value });
         },
         ...(listeners.length ? { listeners } : {}),
       })}

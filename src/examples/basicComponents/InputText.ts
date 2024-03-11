@@ -10,11 +10,11 @@ import {
 
 export type TInputText = {
   // Id attribute to be used for the "for" attribute
-  // in label and for the input element ID (will show)
+  // in label and for the input element ID (will show in DOM).
   id?: string;
 
   // Whether to add the for="id" attribute and the
-  // input's id attribute to the elements
+  // input's id attribute to the elements.
   idAttr?: boolean;
 
   // Whether the type of the input attribute is
@@ -40,19 +40,19 @@ export type TInputText = {
   // attribute or not.
   disabled?: boolean;
 
-  // The input fields change listener
+  // The input fields change listener.
   onChange?: TListener;
 
-  // The input fields input listener
+  // The input fields input listener.
   onInput?: TListener;
 
-  // Input field's listeners
+  // Input field's listeners.
   listeners?: TListenerCreator[];
 
-  // Whether the input should have focus
+  // Whether the input should have focus.
   focus?: boolean;
 
-  // Maximum length forced by the component
+  // Maximum length forced by the component.
   maxLength?: number;
 
   // Whether to lose the focus of the input field
@@ -73,6 +73,14 @@ export type TInputText = {
   // and creates the error CMP with the message
   // (with an empty string, only the class is added).
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
+
+  // @TODO
+  // Regex pattern for the input field.
+  pattern?: string;
+
+  // @TODO
+  // Placeholder text for empty input field.
+  placeholder?: string;
 };
 
 type TInputAttr = {

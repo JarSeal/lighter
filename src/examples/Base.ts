@@ -1,5 +1,6 @@
 import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
+import { InputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
 
@@ -37,6 +38,7 @@ export const Base = (props?: TProps) => {
 
   baseCmp.add(
     InputText({
+      id: 'input-text',
       idAttr: true,
       labelTag: '',
       label: {
@@ -76,9 +78,25 @@ export const Base = (props?: TProps) => {
       },
       // blurOnEnter: true,
       blurOnEsc: true,
-      focusToNextOnEnter: 'text-input',
-      focusToPrevOnShiftEnter: 'clickidi-button',
+      focusToNextOnEnter: 'input-number',
+      focusToPrevOnShiftEnter: 'text-input',
       maxLength: 6,
+    })
+  );
+
+  baseCmp.add(
+    InputNumber({
+      id: 'input-number',
+      value: 3,
+      label: 'Number input',
+      step: 2,
+      blurOnEsc: true,
+      focusToNextOnEnter: 'text-input',
+      focusToPrevOnShiftEnter: 'input-text',
+      onChange: (_, e) => {
+        const value = (e.currentTarget as HTMLInputElement)?.value;
+        console.log('Number changed', value);
+      },
     })
   );
 

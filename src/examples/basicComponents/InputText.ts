@@ -34,6 +34,9 @@ export type TInputText = {
   // The input fields input listener
   onInput?: TListener;
 
+  // Whether the input should have focus
+  focus?: boolean;
+
   // @TODO
   // Whether to lose the focus of the input field
   // on Enter key press. Default false.
@@ -109,6 +112,7 @@ export const InputText = (props?: TInputText) => {
         id: inputId,
         idAttr: true,
         attr: inputAttr,
+        focus: props?.focus,
         ...{ onChange: (_, e) => props?.onChange && props.onChange(inputTextCmp, e) },
         ...{ onInput: (_, e) => props?.onInput && props.onInput(inputTextCmp, e) },
       })}

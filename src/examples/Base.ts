@@ -46,14 +46,15 @@ export const Base = (props?: TProps) => {
       label: {
         html: labelHtml,
       },
-      onChange: (_, e) => {
+      value: 'test',
+      onChange: (cmp, e) => {
         const target = e.target as HTMLInputElement;
-        console.log('onChange', target?.value);
         if (target?.value !== 'reset') {
-          inputTextCmp.update({ value: target?.value });
+          const newCmp = cmp.update({ value: target?.value });
+          console.log('onChange2', newCmp.props?.wrapperProps?.value);
         }
       },
-      onInput: (inputTextCmp, e) => {
+      onInput: (_, e) => {
         const target = e.target as HTMLInputElement;
         console.log('onInput', target?.value, inputTextCmp.props?.wrapperProps);
         if (target?.value === 'reset') {

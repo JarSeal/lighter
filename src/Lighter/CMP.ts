@@ -207,6 +207,7 @@ const addChildCmp = (parent: TCMP, child?: TCMP | TProps) => {
 };
 
 const addTemplateChildCmp = (cmp: TCMP) => {
+  let focusComponent: TCMP | null = null;
   const childCmpElems = cmp.elem.querySelectorAll('cmp');
   for (let i = 0; i < childCmpElems.length; i++) {
     const id = childCmpElems[i].getAttribute('id');
@@ -221,12 +222,13 @@ const addTemplateChildCmp = (cmp: TCMP) => {
       replaceWithCmp.isTemplateCmp = true;
       replaceWithCmp.parent = cmp;
       replaceWithCmp.parentElem = cmp.elem;
-      if (replaceWithCmp.props?.focus) focusCmp(replaceWithCmp);
+      if (replaceWithCmp.props?.focus) focusComponent = replaceWithCmp;
       cmp.children.push(replaceWithCmp);
       runAnims(replaceWithCmp);
       if (cmp.props?.onCreateCmp) cmp.props.onCreateCmp(cmp);
     }
   }
+  if (focusComponent) setTimeout(() => focusComponent && focusCmp(focusComponent), 0);
 };
 
 export const getCmpById = (id: string): TCMP | null => cmps[id] || null;
@@ -422,6 +424,11 @@ const updateCmp = (
       ...newProps,
     };
     const newCmp = cmp.props.wrapper(wrapperProps);
+    if (newCmp.props) {
+      newCmp.props.wrapperProps = wrapperProps;
+    } else {
+      newCmp.props = { wrapperProps };
+    }
     if (cmp.props.attach) rootCMP = newCmp;
     newCmp.id = cmp.id;
     cmp = newCmp;

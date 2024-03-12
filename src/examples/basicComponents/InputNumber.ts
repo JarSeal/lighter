@@ -8,6 +8,11 @@ import {
   getCmpById,
 } from '../../Lighter/CMP';
 
+export type NumberLocaleConfig = {
+  thousandSeparator: string;
+  decimalSeparator: string;
+};
+
 export type TInputNumber = {
   // Id attribute to be used for the "for" attribute
   // in label and for the input element ID (will show in DOM).
@@ -30,7 +35,7 @@ export type TInputNumber = {
   input?: TProps;
 
   // Input value.
-  value?: number;
+  value?: number | null | string;
 
   // Step value for using arrow keys and up/down buttons.
   step?: number;
@@ -51,6 +56,12 @@ export type TInputNumber = {
   normalizePrecision?: boolean;
 
   // @TODO
+  // Locale number representation, meaning that
+  // how does a number look with the thousand
+  // and decimal separators.
+  numberLocaleConfig?: NumberLocaleConfig;
+
+  // @TODO
   // Minimun value for the input field. Must be
   // greater than the possible maxValue.
   minValue?: number;
@@ -59,6 +70,13 @@ export type TInputNumber = {
   // Maximum value for the input field. Must be
   // less than the possible minValue.
   maxValue?: number;
+
+  // Whether the field can be empty or not.
+  // If false and the minValue is provided,
+  // then a null/undefined value will default
+  // to minValue, otherwise 0. If it can and it
+  // is empty, then a null value is returned.
+  canBeEmpty?: boolean;
 
   // Whether the input element has a disabled
   // attribute or not.
@@ -97,7 +115,7 @@ export type TInputNumber = {
   // an error class is added to the main (label) component
   // and creates the error CMP with the message
   // (with an empty string, only the class is added).
-  validationFn?: (value: number | undefined, cmp: TCMP) => string | TProps | null;
+  validationFn?: (value: number | undefined | null | string, cmp: TCMP) => string | TProps | null;
 
   // @TODO
   // Regex pattern for the input field.
@@ -110,13 +128,28 @@ export type TInputNumber = {
 
 type TInputAttr = {
   type: 'number';
-  value?: number;
+  value?: number | null | string;
   disabled?: string;
   step?: number;
 };
 
+export const numberLocaleConfig: NumberLocaleConfig = {
+  thousandSeparator: ' ',
+  decimalSeparator: '.',
+};
+
 export const InputNumber = (props?: TInputNumber) => {
   const inputId = `input_${createNewId()}`;
+
+  if (
+    props?.maxValue !== undefined &&
+    props?.minValue !== undefined &&
+    props?.maxValue < props?.minValue
+  ) {
+    throw new Error(
+      `Max value (maxValue) cannot be greater than the min value (minValue). InputNumber CMP inputId: '${inputId}'.`
+    );
+  }
 
   // Label
   let labelStartTag = '<span>';
@@ -141,14 +174,31 @@ export const InputNumber = (props?: TInputNumber) => {
       }${labelEndTag}`
     : '';
 
+  const setValue = (value?: null | number | string) => {
+    let val = Number(value);
+    // Default is canBeEmpty is true
+    if (props?.canBeEmpty === false && (!val || isNaN(val))) {
+      return props?.minValue || 0;
+    }
+    if (isNaN(val) || value === '') {
+      return '';
+    }
+    if (props?.maxValue !== undefined && val > props.maxValue) {
+      val = props.maxValue;
+    } else if (props?.minValue !== undefined && val < props.minValue) {
+      val = props.minValue;
+    }
+    return val;
+  };
+
   // Input attributes
   const inputAttr: TInputAttr = { type: 'number' };
-  inputAttr.value = props?.value || 0;
+  inputAttr.value = setValue(props?.value);
   if (props?.disabled) inputAttr.disabled = 'true';
   if (props?.step !== undefined) inputAttr.step = props.step;
 
   // Validation
-  const validate = (value?: number) => {
+  const validate = (value?: number | null | string) => {
     if (props?.validationFn) {
       const validationResult = props.validationFn(value, inputNumberCmp);
       errorCmp.removeChildren();
@@ -213,17 +263,31 @@ export const InputNumber = (props?: TInputNumber) => {
         attr: inputAttr,
         focus: props?.focus,
         onChange: (_, e) => {
-          const value = Number((e.target as HTMLInputElement).value);
+          const value = setValue((e.currentTarget as HTMLInputElement).value);
+          console.log('Change', value, (e.currentTarget as HTMLInputElement).value);
           if (props?.validationFn) validate(value);
           props?.onChange && props.onChange(inputNumberCmp, e);
           if (inputNumberCmp.props?.wrapperProps) {
             inputNumberCmp.props.wrapperProps.value = value;
           }
           const inputCpm = getCmpById(inputId);
-          if (inputCpm) inputCpm.updateAttr({ value });
+          if (inputCpm) {
+            inputCpm.updateAttr({ value });
+            (inputCpm.elem as HTMLInputElement).value = String(value);
+          }
+        },
+        onBlur: (_, e) => {
+          const value = setValue((e.currentTarget as HTMLInputElement).value);
+          console.log('Blur', value, (e.currentTarget as HTMLInputElement)?.value);
+          const inputCpm = getCmpById(inputId);
+          if (inputCpm) {
+            inputCpm.updateAttr({ value });
+            (inputCpm.elem as HTMLInputElement).value = String(value);
+          }
         },
         onInput: (_, e) => {
-          const value = Number((e.target as HTMLInputElement).value);
+          const value = Number((e.currentTarget as HTMLInputElement).value);
+          console.log('Input', value, (e.currentTarget as HTMLInputElement)?.value);
           if (props?.validationFn) validate(value);
           props?.onInput && props.onInput(inputNumberCmp, e);
           if (inputNumberCmp.props?.wrapperProps) {

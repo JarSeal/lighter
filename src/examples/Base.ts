@@ -88,8 +88,10 @@ export const Base = (props?: TProps) => {
     InputNumber({
       id: 'input-number',
       value: 3,
+      minValue: 4,
       label: 'Number input',
       step: 2,
+      canBeEmpty: true,
       blurOnEsc: true,
       focusToNextOnEnter: 'text-input',
       focusToPrevOnShiftEnter: 'input-text',

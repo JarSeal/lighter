@@ -88,20 +88,25 @@ export const Base = (props?: TProps) => {
   baseCmp.add(
     InputNumber({
       id: 'input-number',
-      value: 3,
-      minValue: 4,
+      value: 2354355.323,
+      minValue: 0,
+      maxValue: 8000000,
+      unit: '€',
       label: 'Number input',
-      step: 2,
+      // step: 1,
+      placeholder: 'Some number',
+      showReadOnlyValue: true,
+      // hideInputArrows: true,
       canBeEmpty: true,
       blurOnEsc: true,
       focusToNextOnEnter: 'text-input',
       focusToPrevOnShiftEnter: 'input-text',
-      onChange: (_, e) => {
-        const value = (e.currentTarget as HTMLInputElement)?.value;
-        console.log('Number changed', value);
-      },
+      precision: 2,
+      // toLocale: false,
     })
   );
+
+  baseCmp.add(InputNumber());
 
   for (let i = 0; i < 10; i++) {
     baseCmp.add({ text: Math.random().toString(), onClick: (cmp) => console.log(cmp.props?.text) });

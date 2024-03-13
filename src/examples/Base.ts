@@ -58,10 +58,9 @@ export const Base = (props?: TProps) => {
       //     console.log('onChange2', newCmp.props?.wrapperProps?.value);
       //   }
       // },
-      // onInput: (cmp, e) => {
+      // onInput: (_, e) => {
       //   const target = e.target as HTMLInputElement;
-      //   const newCmp = cmp.update({ value: target?.value, focus: true });
-      //   console.log('onInput', target?.value, newCmp.props?.wrapperProps);
+      //   console.log('onInput', target?.value);
       //   if (target?.value === 'reset') {
       //     baseCmp.update();
       //   }
@@ -82,7 +81,8 @@ export const Base = (props?: TProps) => {
       focusToNextOnEnter: 'input-number',
       focusToPrevOnShiftEnter: 'text-input',
       maxLength: 6,
-      selectTextOnFocus: true,
+      selectTextOnFocus: 'start',
+      multiline: true,
     })
   );
 

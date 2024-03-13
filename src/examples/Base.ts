@@ -1,5 +1,6 @@
 import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
+import { InputDropdown } from './basicComponents/InputDropdown';
 import { InputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
@@ -94,7 +95,7 @@ export const Base = (props?: TProps) => {
       maxValue: 8000000,
       unit: '€',
       label: 'Number input',
-      placeholder: 'Some number',
+      placeholder: 'Number',
       showReadOnlyValue: true,
       hideInputArrows: true,
       // toLocale: false,
@@ -104,6 +105,7 @@ export const Base = (props?: TProps) => {
       focusToPrevOnShiftEnter: 'input-text',
       step: 0.001,
       stepShift: 0.01,
+      input: { style: { width: '120px' } },
       // roundToStep: true,
       // decimalCorrectionFactor: 4,
       roundToFactor: -3,
@@ -119,6 +121,12 @@ export const Base = (props?: TProps) => {
   );
 
   baseCmp.add(InputNumber());
+
+  baseCmp.add(
+    InputDropdown({
+      label: 'Dropdown',
+    })
+  );
 
   for (let i = 0; i < 10; i++) {
     baseCmp.add({ text: Math.random().toString(), onClick: (cmp) => console.log(cmp.props?.text) });

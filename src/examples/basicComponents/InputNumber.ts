@@ -413,7 +413,7 @@ export const InputNumber = (props?: TInputNumber) => {
     id: inputId,
     idAttr: props?.idAttr || props?.hideInputArrows,
     attr: inputAttr,
-    ...(props?.showReadOnlyValue ? { style: { opacity: 0 } } : {}),
+    ...(props?.showReadOnlyValue ? { style: { ...props?.input?.style, opacity: 0 } } : {}),
     focus: props?.focus,
     onInput: (_, e) => {
       let value = Number((e.currentTarget as HTMLInputElement).value);

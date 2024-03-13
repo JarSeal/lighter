@@ -32,7 +32,8 @@ export type TInputText = {
   Default is 'span'. */
   labelTag?: string;
 
-  /* Input sub component props. Default is undefined. */
+  /* Input sub component props (usually not needed).
+  Default is undefined. */
   input?: TProps;
 
   /* Input value string. Default is undefined. */
@@ -88,6 +89,12 @@ export type TInputText = {
   (with an empty string, only the class is added).
   Default is undefined. */
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
+
+  /* Whether to select all input content on focus or not.
+  Can also be set to 'end' which means that the caret
+  will be placed at the end of the value. Default is
+  undefined. */
+  selectTextOnFocus?: boolean | 'start' | 'end';
 };
 
 type TInputAttr = {
@@ -229,6 +236,17 @@ export const InputText = (props?: TInputText) => {
           },
           onFocus: (_, e) => {
             inputTextCmp.updateClass('inputHasFocus', 'add');
+            if (props?.selectTextOnFocus === true) {
+              (e.currentTarget as HTMLInputElement).setSelectionRange(
+                0,
+                (e.currentTarget as HTMLInputElement).value.length
+              );
+            } else if (props?.selectTextOnFocus === 'start') {
+              (e.currentTarget as HTMLInputElement).setSelectionRange(0, 0);
+            } else if (props?.selectTextOnFocus === 'end') {
+              const valueLength = (e.currentTarget as HTMLInputElement).value.length;
+              (e.currentTarget as HTMLInputElement).setSelectionRange(valueLength, valueLength);
+            }
             props?.onFocus && props.onFocus(inputTextCmp, e);
           },
           onBlur: (_, e) => {

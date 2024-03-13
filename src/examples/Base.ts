@@ -82,27 +82,35 @@ export const Base = (props?: TProps) => {
       focusToNextOnEnter: 'input-number',
       focusToPrevOnShiftEnter: 'text-input',
       maxLength: 6,
+      selectTextOnFocus: true,
     })
   );
 
   baseCmp.add(
     InputNumber({
       id: 'input-number',
-      value: 2354355.323,
-      minValue: 0,
+      value: 0.001,
+      // minValue: 0,
       maxValue: 8000000,
       unit: '€',
       label: 'Number input',
-      // step: 1,
       placeholder: 'Some number',
       showReadOnlyValue: true,
-      // hideInputArrows: true,
+      hideInputArrows: true,
+      // toLocale: false,
       canBeEmpty: true,
       blurOnEsc: true,
       focusToNextOnEnter: 'text-input',
       focusToPrevOnShiftEnter: 'input-text',
-      precision: 2,
+      step: 0.001,
+      stepShift: 0.01,
+      // roundToStep: true,
+      // decimalCorrectionFactor: 4,
+      roundToFactor: -3,
+      // roundingFunction: 'ceil',
+      // precision: 0,
       // toLocale: false,
+      selectTextOnFocus: 'end',
     })
   );
 

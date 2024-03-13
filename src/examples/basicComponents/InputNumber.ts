@@ -13,19 +13,25 @@ export type NumberLocaleConfig = {
   decimalSeparator: string;
 };
 
-export let numberLocaleGlobalConfig: NumberLocaleConfig = {
+export let defaultDecimalCorrectionFactor: number | false = 14;
+export const setDefaultDecimalCorrectionFactor = (factor: number | false) =>
+  (defaultDecimalCorrectionFactor = factor);
+
+export let defaultNumberLocale: NumberLocaleConfig | false = {
   thousandSeparator: ' ',
   decimalSeparator: ',',
 };
-export const setNumberLocaleGlobalConfig = (config: NumberLocaleConfig) =>
-  (numberLocaleGlobalConfig = config);
+export const setDefaultNumberLocale = (config: NumberLocaleConfig | false) =>
+  (defaultNumberLocale = config);
 
 export const setNumberToLocaleString = (
   value: string | number,
-  numberLocale?: NumberLocaleConfig | false
+  numberLocale?: NumberLocaleConfig | false,
+  placeholder?: string
 ) => {
   const valueString = String(value).trim();
-  if (numberLocale === false) return valueString;
+  const locale = numberLocale !== undefined ? numberLocale : defaultNumberLocale;
+  if (locale === false) return valueString;
   let parts;
   const hasPeriod = Boolean(valueString.includes('.'));
   if (hasPeriod) {
@@ -33,9 +39,34 @@ export const setNumberToLocaleString = (
   } else {
     parts = valueString.split(',');
   }
-  const locale = numberLocale || numberLocaleGlobalConfig;
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, locale.thousandSeparator);
-  return parts.join(locale.decimalSeparator);
+  const returnString = parts.join(locale.decimalSeparator);
+  if (returnString === '') return placeholder || '';
+  return returnString;
+};
+
+export const applyDecimalCorrection = (value: number, decimalCorrectionFactor?: number | false) => {
+  const factor =
+    decimalCorrectionFactor !== undefined
+      ? decimalCorrectionFactor
+      : defaultDecimalCorrectionFactor;
+  if (factor === false) return value;
+  return Number(value.toFixed(factor));
+};
+
+export const roundToFactor = (
+  value: number,
+  roundToFactor: number,
+  roundingFunction?: 'round' | 'floor' | 'ceil'
+) => {
+  if (!roundingFunction) roundingFunction = 'round';
+  if (roundToFactor < 0) {
+    const pow = Math.pow(10, Math.abs(roundToFactor));
+    value = 0.01 / pow + value;
+    return Math[roundingFunction](value * pow) / pow;
+  }
+  const pow = Math.pow(10, roundToFactor);
+  return Math[roundingFunction](value / pow) * pow;
 };
 
 export type TInputNumber = {
@@ -73,16 +104,24 @@ export type TInputNumber = {
   Default is 1. */
   step?: number;
 
-  // @TODO
   /* Step value for using arrow keys and up/down buttons
   with the shift key. Default is undefined. */
   stepShift?: number;
 
-  // @TODO
   /* Round to step value. This means that the number
   returned will only be a step value number.
-  Requires step to be defined. Default is false. */
-  roundToStepValue?: boolean;
+  Requires step to be defined. To work correctly, the minValue
+  and the maxValue should be dividable by the step. Default is false. */
+  roundToStep?: boolean;
+
+  /* Rounds the value to the Math.pow(10, roundToFactor).
+  So then a value of 5 with a roundToFactor of 1 would
+  be 10 and 4 would be 0. Default is undefined (no rounding). */
+  roundToFactor?: number;
+
+  /* Determines what rounding function to use when
+  roundToFactor or roundToStep is used. Default is 'round'. */
+  roundingFunction?: 'round' | 'floor' | 'ceil';
 
   /* Precision decimals count (0-100). This is used 
   to show the full precision value (even if 2.0000)
@@ -91,14 +130,15 @@ export type TInputNumber = {
   is undefined. */
   precision?: number;
 
-  /* Locale number representation, meaning that
-  how does a number look with the thousand
-  and decimal separators. Set to false to disable
-  locale parsing. Requires showReadOnlyValue to be
-  true to have effect. Default is
-  numberLocalGlobalConfig and it can be set with
-  the setNumberLocaleConfig util. */
-  toLocale?: NumberLocaleConfig | false;
+  /* If the float given has more than this number of decimals,
+  then it will be rounded to this correction value. This
+  is to prevent Javascript float problems like
+  0.2 * 0.2 = 0.04000000000000001. This also means that it
+  is the max decimals that a number can have. If set to false,
+  then no correction or rounding is done. Default is
+  the defaultDecimalCorrectionFactor and it can be set with
+  the setDefaultDecimalCorrectionFactor util. */
+  decimalCorrectionFactor?: number | false;
 
   /* Show read-only value? This value will be shown when
   the input field does not have focus and then is
@@ -106,6 +146,15 @@ export type TInputNumber = {
   value can then be formatted according to locale config.
   Default id false. */
   showReadOnlyValue?: boolean;
+
+  /* Locale number representation, meaning that
+  how does a number look with the thousand
+  and decimal separators. Set to false to disable
+  locale parsing. Requires showReadOnlyValue to be
+  true to have effect. Default is
+  the defaultNumberLocale and it can be set with
+  the setDefaultNumberLocale util. */
+  toLocale?: NumberLocaleConfig | false;
 
   /* Hide input number arrow buttons or not. Default is false. */
   hideInputArrows?: boolean;
@@ -181,6 +230,12 @@ export type TInputNumber = {
   (with an empty string, only the class is added).
   Default is undefined. */
   validationFn?: (value: number | undefined | null | string, cmp: TCMP) => string | TProps | null;
+
+  /* Whether to select all input content on focus or not.
+  Can also be set to 'end' which means that the caret
+  will be placed at the end of the value. Default is
+  undefined. */
+  selectTextOnFocus?: boolean | 'start' | 'end';
 };
 
 type TInputAttr = {
@@ -229,16 +284,30 @@ export const InputNumber = (props?: TInputNumber) => {
       }${labelEndTag}`
     : '';
 
-  const setPrecision = (value: number) => {
-    if (props?.precision === undefined) return value;
-    return value.toFixed(props.precision);
+  const setPrecisionAndRounding = (value: number) => {
+    let val = value;
+    if (props?.roundToFactor !== undefined) {
+      val = roundToFactor(val, props.roundToFactor, props?.roundingFunction);
+    } else if (props?.roundToStep && props?.step !== undefined) {
+      const remainder = val % props.step;
+      if (remainder !== 0) {
+        const roundingFunction = props?.roundingFunction || 'round';
+        const roundedMultiplier = Math[roundingFunction](remainder / props.step);
+        val = val - remainder + roundedMultiplier * props.step;
+        if (props?.minValue !== undefined && val < props.minValue) val = props.minValue;
+        if (props?.maxValue !== undefined && val > props.maxValue) val = props.maxValue;
+      }
+    }
+    val = applyDecimalCorrection(val, props?.decimalCorrectionFactor);
+    if (props?.precision === undefined) return val;
+    return val.toFixed(props.precision);
   };
 
   const setValue = (value?: null | number | string) => {
     let val = Number(value);
     // Default for canBeEmpty is true
-    if (props?.canBeEmpty === false && (!val || isNaN(val))) {
-      return setPrecision(props?.minValue || 0);
+    if (props?.canBeEmpty === false && ((!val && val !== 0) || isNaN(val))) {
+      return setPrecisionAndRounding(props?.minValue || 0);
     }
     if (isNaN(val) || value === '') {
       return '';
@@ -248,12 +317,14 @@ export const InputNumber = (props?: TInputNumber) => {
     } else if (props?.minValue !== undefined && val < props.minValue) {
       val = props.minValue;
     }
-    return setPrecision(val);
+    return setPrecisionAndRounding(val);
   };
 
   // Input attributes
   const inputAttr: TInputAttr = { type: 'number' };
-  inputAttr.value = setValue(props?.value);
+  if (!props) props = {};
+  props.value = setValue(props?.value);
+  inputAttr.value = props?.value;
   if (props?.disabled) inputAttr.disabled = 'true';
   if (props?.step !== undefined) inputAttr.step = props.step;
   if (props?.placeholder) inputAttr.placeholder = props.placeholder;
@@ -281,13 +352,15 @@ export const InputNumber = (props?: TInputNumber) => {
     }
   };
 
-  // Enter key press
+  // Enter key press and disable shiftPressed
   let listeners = props?.listeners || [];
+  let shiftPressed = false;
   if (
     props?.blurOnEnter ||
     props?.blurOnEsc ||
     props?.focusToNextOnEnter ||
-    props?.focusToPrevOnShiftEnter
+    props?.focusToPrevOnShiftEnter ||
+    props?.stepShift !== undefined
   ) {
     const existingKeyup = listeners.find((l) => l.type === 'keyup');
     listeners = listeners.filter((l) => l.type !== 'keyup');
@@ -295,6 +368,7 @@ export const InputNumber = (props?: TInputNumber) => {
       type: 'keyup',
       fn: (cmp, e) => {
         const event = e as KeyboardEvent;
+        shiftPressed = event.shiftKey;
         if (event.code === 'Enter') {
           if (props?.blurOnEnter) cmp.elem.blur();
           if (props?.focusToNextOnEnter && !event.shiftKey) {
@@ -314,6 +388,20 @@ export const InputNumber = (props?: TInputNumber) => {
     });
   }
 
+  // Shift step
+  if (props?.stepShift !== undefined) {
+    const existingKeydown = listeners.find((l) => l.type === 'keydown');
+    listeners = listeners.filter((l) => l.type !== 'keydown');
+    listeners.push({
+      type: 'keydown',
+      fn: (cmp, e) => {
+        const event = e as KeyboardEvent;
+        shiftPressed = event.shiftKey;
+        if (existingKeydown?.fn) existingKeydown.fn(cmp, e);
+      },
+    });
+  }
+
   const inputCmp = CMP({
     ...props?.input,
     tag: 'input',
@@ -324,64 +412,96 @@ export const InputNumber = (props?: TInputNumber) => {
     ...(props?.showReadOnlyValue ? { style: { opacity: 0 } } : {}),
     focus: props?.focus,
     onInput: (_, e) => {
-      const value = Number((e.currentTarget as HTMLInputElement).value);
+      let value = Number((e.currentTarget as HTMLInputElement).value);
+      const oldValue = Number(inputNumberCmp.props?.wrapperProps?.value || 0);
+      if (props?.step && props?.stepShift && shiftPressed) {
+        const additionCheck = setValue(oldValue + props.step);
+        const substractionCheck = setValue(oldValue - props.step);
+        if (additionCheck === value) {
+          value = Number(setValue(oldValue + props.stepShift));
+          (e.target as HTMLInputElement).value = String(value);
+          (e.currentTarget as HTMLInputElement).value = String(value);
+        } else if (substractionCheck === value) {
+          value = Number(setValue(oldValue - props.stepShift));
+          (e.target as HTMLInputElement).value = String(value);
+          (e.currentTarget as HTMLInputElement).value = String(value);
+        }
+      }
       readOnlyValueCmp &&
         readOnlyValueCmp.update({
           ...readOnlyValueCmp.props,
-          text: setNumberToLocaleString(setValue(value), props?.toLocale),
+          text: setNumberToLocaleString(setValue(value), props?.toLocale, props?.placeholder),
         });
-      console.log('Input', value, (e.currentTarget as HTMLInputElement)?.value);
       if (props?.validationFn) validate(value);
       props?.onInput && props.onInput(inputNumberCmp, e);
       if (inputNumberCmp.props?.wrapperProps) {
         inputNumberCmp.props.wrapperProps.value = value;
       }
-      const inputCpm = getCmpById(inputId);
-      if (inputCpm) inputCpm.updateAttr({ value });
+      inputCmp.updateAttr({ value });
+      if (props?.step && props?.stepShift && shiftPressed) {
+        (inputCmp.elem as HTMLInputElement).value = String(value);
+      }
     },
     onChange: (_, e) => {
       const value = setValue((e.currentTarget as HTMLInputElement).value);
       readOnlyValueCmp &&
         readOnlyValueCmp.update({
           ...readOnlyValueCmp.props,
-          text: setNumberToLocaleString(setValue(value), props?.toLocale),
+          text: setNumberToLocaleString(setValue(value), props?.toLocale, props?.placeholder),
         });
-      console.log('Change', value, (e.currentTarget as HTMLInputElement).value);
       if (props?.validationFn) validate(value);
       props?.onChange && props.onChange(inputNumberCmp, e);
       if (inputNumberCmp.props?.wrapperProps) {
         inputNumberCmp.props.wrapperProps.value = value;
       }
-      const inputCpm = getCmpById(inputId);
-      if (inputCpm) {
-        inputCpm.updateAttr({ value });
-        (inputCpm.elem as HTMLInputElement).value = String(value);
-      }
+      inputCmp.updateAttr({ value });
+      (inputCmp.elem as HTMLInputElement).value = String(value);
     },
     onBlur: (_, e) => {
+      shiftPressed = false;
       inputNumberCmp.updateClass('inputHasFocus', 'remove');
-      props?.showReadOnlyValue && inputCmp.updateStyle({ opacity: 0 });
-      // @TODO: check if the value has actually changed
       const value = setValue((e.currentTarget as HTMLInputElement).value);
-      readOnlyValueCmp &&
+      if (readOnlyValueCmp) {
+        inputCmp.updateStyle({ opacity: 0 });
         readOnlyValueCmp
           .update({
             ...readOnlyValueCmp.props,
-            text: setNumberToLocaleString(setValue(value), props?.toLocale),
+            text: setNumberToLocaleString(setValue(value), props?.toLocale, props?.placeholder),
           })
-          .updateStyle({ display: 'block' });
-      console.log('Blur', value, (e.currentTarget as HTMLInputElement)?.value);
-      props?.onBlur && props.onBlur(inputNumberCmp, e);
-      const inputCpm = getCmpById(inputId);
-      if (inputCpm) {
-        inputCpm.updateAttr({ value });
-        (inputCpm.elem as HTMLInputElement).value = String(value);
+          .updateStyle({ display: 'block' })
+          .updateClass(
+            'inputNumberReadOnlyPlaceholder',
+            setNumberToLocaleString(setValue(props?.value), props?.toLocale) === ''
+              ? 'add'
+              : 'remove'
+          );
       }
+      props?.onBlur && props.onBlur(inputNumberCmp, e);
+      inputCmp.updateAttr({ value });
+      (inputCmp.elem as HTMLInputElement).value = String(value);
     },
     onFocus: (_, e) => {
       inputNumberCmp.updateClass('inputHasFocus', 'add');
-      props?.showReadOnlyValue && inputCmp.updateStyle({ opacity: 1 });
-      readOnlyValueCmp && readOnlyValueCmp.updateStyle({ display: 'none' });
+      if (props?.selectTextOnFocus === true) {
+        const elem = e.currentTarget as HTMLInputElement;
+        elem.type = 'text';
+        elem.setSelectionRange(0, elem.value.length);
+        elem.type = 'number';
+      } else if (props?.selectTextOnFocus === 'start') {
+        const elem = e.currentTarget as HTMLInputElement;
+        elem.type = 'text';
+        elem.setSelectionRange(0, 0);
+        elem.type = 'number';
+      } else if (props?.selectTextOnFocus === 'end') {
+        const elem = e.currentTarget as HTMLInputElement;
+        elem.type = 'text';
+        elem.setSelectionRange(elem.value.length, elem.value.length);
+        elem.type = 'number';
+      }
+      if (readOnlyValueCmp) {
+        inputCmp.updateStyle({ opacity: 1 });
+        readOnlyValueCmp.updateStyle({ display: 'none' });
+      }
       props?.onFocus && props.onFocus(inputNumberCmp, e);
     },
     ...(listeners.length ? { listeners } : {}),
@@ -389,8 +509,13 @@ export const InputNumber = (props?: TInputNumber) => {
 
   const readOnlyValueCmp = props?.showReadOnlyValue
     ? CMP({
-        text: setNumberToLocaleString(setValue(props?.value), props?.toLocale),
-        class: 'inputNumberReadOnly',
+        text: setNumberToLocaleString(setValue(props?.value), props?.toLocale, props?.placeholder),
+        class: [
+          'inputNumberReadOnly',
+          ...(setNumberToLocaleString(setValue(props?.value), props?.toLocale) === ''
+            ? ['inputNumberReadOnlyPlaceholder']
+            : []),
+        ],
         style: { position: 'absolute', top: 0, left: 0, width: '100%' },
         onClick: () => (inputCmp.elem as HTMLInputElement)?.focus(),
       })

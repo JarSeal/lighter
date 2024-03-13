@@ -9,77 +9,92 @@ import {
 } from '../../Lighter/CMP';
 
 export type TInputText = {
-  // Id attribute to be used for the "for" attribute
-  // in label and for the input element ID (will show in DOM).
+  /* Id to be used for the "for" attribute
+  in label and for the input element ID. Default is
+  input_[id] that will be created for the input CMP. */
   id?: string;
 
-  // Whether to add the for="id" attribute and the
-  // input's id attribute to the elements.
+  /* Whether to add the for="id" attribute and the
+  input's id attribute to the elements. Default is false. */
   idAttr?: boolean;
 
-  // Whether the type of the input attribute is
-  // "password" or "text".
+  /* Whether the type of the input attribute is
+  "password" or "text". Default is 'text'. */
   isPassword?: boolean;
 
-  // Label can either be a string (just text) or
-  // sub component props (any component props).
+  /* Label can either be a string (just text) or
+  sub component props (any component props). 
+  Default is undefined. */
   label?: string | TProps;
 
-  // Whether the label has a wrapping element
-  // or not (defined by an empty string: '').
-  // Default is 'span'.
+  /* Whether the label has a wrapping element
+  or not (defined by an empty string: '').
+  Default is 'span'. */
   labelTag?: string;
 
-  // Input sub component props.
+  /* Input sub component props (usually not needed).
+  Default is undefined. */
   input?: TProps;
 
-  // Input value
+  /* Input value string. Default is undefined. */
   value?: string;
 
-  // Whether the input element has a disabled
-  // attribute or not.
+  /* Placeholder text for empty input field. Default
+  is undefined. */
+  placeholder?: string;
+
+  /* Whether the input element has a disabled
+  attribute or not. Default is false. */
   disabled?: boolean;
 
-  // The input fields change listener.
+  /* The input fields change listener. Default is undefined. */
   onChange?: TListener;
 
-  // The input fields input listener.
+  /* The input fields input listener. Default is undefined. */
   onInput?: TListener;
 
-  // Input field's listeners.
+  /* The input field focus listener. Default is undefined. */
+  onFocus?: TListener;
+
+  /* The input field blur listener. Default is undefined. */
+  onBlur?: TListener;
+
+  /* Input field's listeners. Default is undefined. */
   listeners?: TListenerCreator[];
 
-  // Whether the input should have focus.
+  /* Whether the input should have focus on create or
+  update. Default is false. */
   focus?: boolean;
 
-  // Maximum length forced by the component.
+  /* Maximum length forced by the component. Default
+  is undefined. */
   maxLength?: number;
 
-  // Whether to lose the focus of the input field
-  // on Enter/Esc key press. Default false.
+  /* Whether to lose the focus of the input field
+  on Enter/Esc key press. Default is false. */
   blurOnEnter?: boolean;
   blurOnEsc?: boolean;
 
-  // Whether to set focus to the next/prev input elem
-  // in DOM on Enter key press. It can be given
-  // the ID of the next/prev elem. Default undefined.
+  /* Whether to set focus to the next/prev input elem
+  in DOM on Enter key press. It can be given
+  the ID of the next/prev elem. Default is undefined. */
   focusToNextOnEnter?: string;
   focusToPrevOnShiftEnter?: string;
 
-  // Runs the validationFn for every input and change event
-  // and on the component initialization. Returns either
-  // a message string, CMP props, or null. If not null,
-  // an error class is added to the main (label) component
-  // and creates the error CMP with the message
-  // (with an empty string, only the class is added).
+  /* Runs the validationFn for every input and change event
+  and on the component initialization. Returns either
+  a message string, CMP props, or null. If not null,
+  an error class is added to the main (label) component
+  and creates the error CMP with the message
+  (with an empty string, only the class is added).
+  Default is undefined. */
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
 
-  // @TODO
-  // Regex pattern for the input field.
-  pattern?: string;
-
-  // Placeholder text for empty input field.
-  placeholder?: string;
+  /* Whether to select all input content on focus or not.
+  Can also be set to 'end' which means that the caret
+  will be placed at the end of the value. Default is
+  undefined. */
+  selectTextOnFocus?: boolean | 'start' | 'end';
 };
 
 type TInputAttr = {
@@ -94,23 +109,25 @@ export const InputText = (props?: TInputText) => {
   const inputId = `input_${createNewId()}`;
 
   // Label
-  let labelStartTag = '<span>';
+  const LABEL_CLASS = 'inputLabel';
+  let labelStartTag = `<span class="${LABEL_CLASS}">`;
   let labelEndTag = '</span>';
   if (props?.labelTag !== undefined) {
     if (props.labelTag === '') {
       labelStartTag = '';
       labelEndTag = '';
     } else {
-      labelStartTag = `<${props.labelTag}>`;
+      labelStartTag = `<${props.labelTag} class="${LABEL_CLASS}">`;
       labelEndTag = `</${props.labelTag}>`;
     }
   }
-  const label = props?.label
+  const labelHtml = props?.label
     ? `${labelStartTag}${
         typeof props.label === 'string'
           ? props.label
           : CMP({
               tag: 'span',
+              class: LABEL_CLASS,
               ...props.label,
             })
       }${labelEndTag}`
@@ -130,11 +147,12 @@ export const InputText = (props?: TInputText) => {
 
   // Validation
   const validate = (value?: string) => {
+    const ERROR_CLASS = 'inputHasError';
     if (props?.validationFn) {
       const validationResult = props.validationFn(value, inputTextCmp);
       errorCmp.removeChildren();
       if (validationResult) {
-        inputTextCmp.updateClass('hasError');
+        inputTextCmp.updateClass(ERROR_CLASS, 'add');
         errorCmp.add(
           CMP(
             typeof validationResult === 'string'
@@ -143,9 +161,9 @@ export const InputText = (props?: TInputText) => {
           )
         );
       } else if (validationResult === '') {
-        inputTextCmp.updateClass('hasError');
+        inputTextCmp.updateClass(ERROR_CLASS, 'add');
       } else {
-        inputTextCmp.updateClass('hasError', 'remove');
+        inputTextCmp.updateClass(ERROR_CLASS, 'remove');
       }
     }
   };
@@ -184,38 +202,60 @@ export const InputText = (props?: TInputText) => {
   }
 
   const getHtml = () =>
-    `<label${props?.idAttr ? ` for="${inputId}"` : ''}>
-      ${label}
-      ${CMP({
-        ...props?.input,
-        tag: 'input',
-        id: inputId,
-        idAttr: props?.idAttr,
-        attr: inputAttr,
-        focus: props?.focus,
-        ...(props?.onChange || props?.validationFn
-          ? {
-              onChange: (_, e) => {
-                if (props.validationFn) {
-                  const value = (e.target as HTMLInputElement).value;
-                  validate(value);
-                }
-                props.onChange && props.onChange(inputTextCmp, e);
-              },
+    `<label class="inputField inputText"${props?.idAttr ? ` for="${inputId}"` : ''}>
+      ${labelHtml}
+      <div class="inputValueOuter">
+        ${CMP({
+          ...props?.input,
+          tag: 'input',
+          id: inputId,
+          idAttr: props?.idAttr,
+          attr: inputAttr,
+          class: 'inputTextElem',
+          focus: props?.focus,
+          ...(props?.onChange || props?.validationFn
+            ? {
+                onChange: (_, e) => {
+                  if (props.validationFn) {
+                    const value = (e.target as HTMLInputElement).value;
+                    validate(value);
+                  }
+                  props.onChange && props.onChange(inputTextCmp, e);
+                },
+              }
+            : {}),
+          onInput: (_, e) => {
+            const value = (e.target as HTMLInputElement).value;
+            if (props?.validationFn) {
+              validate(value);
             }
-          : {}),
-        onInput: (_, e) => {
-          const value = (e.target as HTMLInputElement).value;
-          if (props?.validationFn) {
-            validate(value);
-          }
-          props?.onInput && props.onInput(inputTextCmp, e);
-          if (inputTextCmp.props?.wrapperProps) {
-            inputTextCmp.props.wrapperProps.value = value;
-          }
-        },
-        ...(listeners.length ? { listeners } : {}),
-      })}
+            props?.onInput && props.onInput(inputTextCmp, e);
+            if (inputTextCmp.props?.wrapperProps) {
+              inputTextCmp.props.wrapperProps.value = value;
+            }
+          },
+          onFocus: (_, e) => {
+            inputTextCmp.updateClass('inputHasFocus', 'add');
+            if (props?.selectTextOnFocus === true) {
+              (e.currentTarget as HTMLInputElement).setSelectionRange(
+                0,
+                (e.currentTarget as HTMLInputElement).value.length
+              );
+            } else if (props?.selectTextOnFocus === 'start') {
+              (e.currentTarget as HTMLInputElement).setSelectionRange(0, 0);
+            } else if (props?.selectTextOnFocus === 'end') {
+              const valueLength = (e.currentTarget as HTMLInputElement).value.length;
+              (e.currentTarget as HTMLInputElement).setSelectionRange(valueLength, valueLength);
+            }
+            props?.onFocus && props.onFocus(inputTextCmp, e);
+          },
+          onBlur: (_, e) => {
+            inputTextCmp.updateClass('inputHasFocus', 'remove');
+            props?.onBlur && props.onBlur(inputTextCmp, e);
+          },
+          ...(listeners.length ? { listeners } : {}),
+        })}
+      </div>
     </label>`;
 
   const inputTextCmp = CMP({
@@ -226,7 +266,7 @@ export const InputText = (props?: TInputText) => {
     wrapperProps: props,
   });
 
-  const errorCmp = inputTextCmp.add(CMP({ class: 'errorMsg' }));
+  const errorCmp = inputTextCmp.add(CMP({ class: 'inputErrorMsg' }));
 
   validate(props?.value);
 

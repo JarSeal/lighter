@@ -82,24 +82,43 @@ export const Base = (props?: TProps) => {
       focusToNextOnEnter: 'input-number',
       focusToPrevOnShiftEnter: 'text-input',
       maxLength: 6,
+      selectTextOnFocus: true,
     })
   );
 
   baseCmp.add(
     InputNumber({
       id: 'input-number',
-      value: 3,
+      value: '',
+      minValue: 0,
+      maxValue: 8000000,
+      unit: '€',
       label: 'Number input',
-      step: 2,
+      placeholder: 'Some number',
+      showReadOnlyValue: true,
+      hideInputArrows: true,
+      // toLocale: false,
+      canBeEmpty: true,
       blurOnEsc: true,
       focusToNextOnEnter: 'text-input',
       focusToPrevOnShiftEnter: 'input-text',
-      onChange: (_, e) => {
-        const value = (e.currentTarget as HTMLInputElement)?.value;
-        console.log('Number changed', value);
+      step: 0.001,
+      stepShift: 0.01,
+      // roundToStep: true,
+      // decimalCorrectionFactor: 4,
+      roundToFactor: -3,
+      // roundingFunction: 'ceil',
+      // precision: 0,
+      // toLocale: false,
+      selectTextOnFocus: 'end',
+      validationFn: (value) => {
+        if (value === 1.1) return 'Not allowed';
+        return null;
       },
     })
   );
+
+  baseCmp.add(InputNumber());
 
   for (let i = 0; i < 10; i++) {
     baseCmp.add({ text: Math.random().toString(), onClick: (cmp) => console.log(cmp.props?.text) });

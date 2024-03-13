@@ -596,9 +596,12 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
     const value = newStyle[styleProps[i]];
     if (prop && value !== null) {
       // @TODO: test if null values remove the rule?
-      cmp.elem.style[prop as unknown as number] = String(value);
+      const valueAsString = String(value);
+      cmp.elem.style[prop as unknown as number] = valueAsString;
+      setPropsValue(cmp, { style: { ...cmp.props?.style, [prop]: valueAsString } });
     } else if (value === null) {
       cmp.elem.style.removeProperty(prop);
+      if (cmp.props?.style) delete cmp.props.style[prop];
     }
   }
 

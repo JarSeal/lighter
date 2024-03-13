@@ -32,7 +32,7 @@ export type TInputText = {
   Default is 'span'. */
   labelTag?: string;
 
-  /* Input sub component props (usually not needed).
+  /* Input/textarea sub component props (usually not needed).
   Default is undefined. */
   input?: TProps;
 
@@ -95,6 +95,19 @@ export type TInputText = {
   will be placed at the end of the value. Default is
   undefined. */
   selectTextOnFocus?: boolean | 'start' | 'end';
+
+  /* Whether the input field is multiline or not. For
+  single line an input tag type of 'text' or 'password'
+  is used and for multiline a textarea tag is used.
+  Default is false. */
+  multiline?: boolean;
+
+  // @TODO
+  /* Defines the character counter's maximum character
+  count. When set, will show the actual character
+  count in relation to the max value (24/130).
+  Default is undefined (no character counter). */
+  charCountMax?: number;
 };
 
 type TInputAttr = {
@@ -135,12 +148,14 @@ export const InputText = (props?: TInputText) => {
 
   // Input attributes
   const inputAttr: TInputAttr = {};
-  if (props?.isPassword) {
-    inputAttr.type = 'password';
-  } else {
-    inputAttr.type = 'text';
+  if (!props?.multiline) {
+    if (props?.isPassword) {
+      inputAttr.type = 'password';
+    } else {
+      inputAttr.type = 'text';
+    }
+    inputAttr.value = props?.value || '';
   }
-  inputAttr.value = props?.value || '';
   if (props?.disabled) inputAttr.disabled = 'true';
   if (props?.maxLength) inputAttr.maxlength = props.maxLength;
   if (props?.placeholder) inputAttr.placeholder = props.placeholder;
@@ -168,7 +183,7 @@ export const InputText = (props?: TInputText) => {
     }
   };
 
-  // Enter key press
+  // Enter and Esc key presses
   let listeners = props?.listeners || [];
   if (
     props?.blurOnEnter ||
@@ -182,7 +197,7 @@ export const InputText = (props?: TInputText) => {
       type: 'keyup',
       fn: (cmp, e) => {
         const event = e as KeyboardEvent;
-        if (event.code === 'Enter') {
+        if (!props?.multiline && event.code === 'Enter') {
           if (props?.blurOnEnter) cmp.elem.blur();
           if (props?.focusToNextOnEnter && !event.shiftKey) {
             const nextCmp = getCmpById(props.focusToNextOnEnter);
@@ -202,12 +217,15 @@ export const InputText = (props?: TInputText) => {
   }
 
   const getHtml = () =>
-    `<label class="inputField inputText"${props?.idAttr ? ` for="${inputId}"` : ''}>
+    `<label class="inputField inputText${
+      props?.multiline ? ' inputTextMulti' : ' inputTextSingle'
+    }"${props?.idAttr ? ` for="${inputId}"` : ''}>
       ${labelHtml}
       <div class="inputValueOuter">
         ${CMP({
           ...props?.input,
-          tag: 'input',
+          tag: props?.multiline ? 'textarea' : 'input',
+          ...(props?.multiline ? { text: props?.value || '' } : {}),
           id: inputId,
           idAttr: props?.idAttr,
           attr: inputAttr,

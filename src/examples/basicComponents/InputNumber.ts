@@ -244,6 +244,8 @@ type TInputAttr = {
   disabled?: string;
   step?: number;
   placeholder?: string;
+  min?: number;
+  max?: number;
 };
 
 export const InputNumber = (props?: TInputNumber) => {
@@ -325,6 +327,8 @@ export const InputNumber = (props?: TInputNumber) => {
   if (!props) props = {};
   props.value = setValue(props?.value);
   inputAttr.value = props?.value;
+  if (props?.minValue !== undefined) inputAttr.min = props.minValue;
+  if (props?.maxValue !== undefined) inputAttr.max = props.maxValue;
   if (props?.disabled) inputAttr.disabled = 'true';
   if (props?.step !== undefined) inputAttr.step = props.step;
   if (props?.placeholder) inputAttr.placeholder = props.placeholder;

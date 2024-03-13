@@ -331,12 +331,12 @@ export const InputNumber = (props?: TInputNumber) => {
 
   // Validation
   const validate = (value?: number | null | string) => {
-    const ERROR_CLASS = 'inputHasError';
     if (props?.validationFn) {
+      const ERROR_CLASS = 'inputHasError';
       const validationResult = props.validationFn(value, inputNumberCmp);
       errorCmp.removeChildren();
       if (validationResult) {
-        inputNumberCmp.updateClass(ERROR_CLASS);
+        inputNumberCmp.updateClass(ERROR_CLASS, 'add');
         errorCmp.add(
           CMP(
             typeof validationResult === 'string'
@@ -345,7 +345,7 @@ export const InputNumber = (props?: TInputNumber) => {
           )
         );
       } else if (validationResult === '') {
-        inputNumberCmp.updateClass(ERROR_CLASS);
+        inputNumberCmp.updateClass(ERROR_CLASS, 'add');
       } else {
         inputNumberCmp.updateClass(ERROR_CLASS, 'remove');
       }

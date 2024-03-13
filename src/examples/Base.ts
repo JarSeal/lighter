@@ -89,8 +89,8 @@ export const Base = (props?: TProps) => {
   baseCmp.add(
     InputNumber({
       id: 'input-number',
-      value: 0.001,
-      // minValue: 0,
+      value: '',
+      minValue: 0,
       maxValue: 8000000,
       unit: '€',
       label: 'Number input',
@@ -111,6 +111,10 @@ export const Base = (props?: TProps) => {
       // precision: 0,
       // toLocale: false,
       selectTextOnFocus: 'end',
+      validationFn: (value) => {
+        if (value === 1.1) return 'Not allowed';
+        return null;
+      },
     })
   );
 

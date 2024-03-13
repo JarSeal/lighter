@@ -5,10 +5,11 @@ import {
   type TListener,
   type TProps,
   type TCMP,
+  type TStyle,
   getCmpById,
 } from '../../Lighter/CMP';
 
-export type TInputText = {
+export type TInputDropdown = {
   /* Id to be used for the "for" attribute
   in label and for the input element ID. Default is
   input_[id] that will be created for the input CMP. */
@@ -17,10 +18,6 @@ export type TInputText = {
   /* Whether to add the for="id" attribute and the
   input's id attribute to the elements. Default is false. */
   idAttr?: boolean;
-
-  /* Whether the type of the input attribute is
-  "password" or "text". Default is 'text'. */
-  isPassword?: boolean;
 
   /* Label can either be a string (just text) or
   sub component props (any component props). 
@@ -32,16 +29,21 @@ export type TInputText = {
   Default is 'span'. */
   labelTag?: string;
 
-  /* Input/textarea sub component props (usually not needed).
+  /* Input sub component props (usually not needed).
   Default is undefined. */
   input?: TProps;
 
   /* Input value string. Default is undefined. */
   value?: string;
 
-  /* Placeholder text for empty input field. Default
-  is undefined. */
-  placeholder?: string;
+  // @TODO
+  /* Options... */
+  options?: {
+    label: string;
+    value: string;
+    class?: string | string[];
+    style?: TStyle;
+  }[];
 
   /* Whether the input element has a disabled
   attribute or not. Default is false. */
@@ -49,9 +51,6 @@ export type TInputText = {
 
   /* The input fields change listener. Default is undefined. */
   onChange?: TListener;
-
-  /* The input fields input listener. Default is undefined. */
-  onInput?: TListener;
 
   /* The input field focus listener. Default is undefined. */
   onFocus?: TListener;
@@ -66,10 +65,6 @@ export type TInputText = {
   update. Default is false. */
   focus?: boolean;
 
-  /* Maximum length forced by the component. Default
-  is undefined. */
-  maxLength?: number;
-
   /* Whether to lose the focus of the input field
   on Enter/Esc key press. Default is false. */
   blurOnEnter?: boolean;
@@ -81,7 +76,7 @@ export type TInputText = {
   focusToNextOnEnter?: string;
   focusToPrevOnShiftEnter?: string;
 
-  /* Runs the validationFn for every input and change event
+  /* Runs the validationFn for every change event
   and on the component initialization. Returns either
   a message string, CMP props, or null. If not null,
   an error class is added to the main (label) component
@@ -90,30 +85,9 @@ export type TInputText = {
   Default is undefined. */
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
 
-  /* Whether to select all input content on focus or not.
-  Can also be set to 'end' which means that the caret
-  will be placed at the end of the value. Default is
-  undefined. */
-  selectTextOnFocus?: boolean | 'start' | 'end';
-
-  /* Whether the input field is multiline or not. For
-  single line an input tag type of 'text' or 'password'
-  is used and for multiline a textarea tag is used.
-  Default is false. */
-  multiline?: boolean;
-
-  // @TODO
-  /* Defines the character counter's maximum character
-  count. When set, will show the actual character
-  count in relation to the max value (24/130).
-  Default is undefined (no character counter). */
-  charCountMax?: number;
-
-  // @TODO
-  /* Regex pattern for the input field. For example,
-  the regex could force only numbers to this field.
-  Default is undefined. */
-  regex?: string;
+  /* A custom icon (CMP) to show on top of the
+  dropdown "down arrow" icon. Default is undefined. */
+  icon?: TProps;
 };
 
 type TInputAttr = {
@@ -121,10 +95,9 @@ type TInputAttr = {
   value?: string;
   disabled?: string;
   maxlength?: number;
-  placeholder?: string;
 };
 
-export const InputText = (props?: TInputText) => {
+export const InputDropdown = (props?: TInputDropdown) => {
   const inputId = `input_${createNewId()}`;
 
   // Label
@@ -154,17 +127,7 @@ export const InputText = (props?: TInputText) => {
 
   // Input attributes
   const inputAttr: TInputAttr = {};
-  if (!props?.multiline) {
-    if (props?.isPassword) {
-      inputAttr.type = 'password';
-    } else {
-      inputAttr.type = 'text';
-    }
-    inputAttr.value = props?.value || '';
-  }
   if (props?.disabled) inputAttr.disabled = 'true';
-  if (props?.maxLength) inputAttr.maxlength = props.maxLength;
-  if (props?.placeholder) inputAttr.placeholder = props.placeholder;
 
   // Validation
   const validate = (value?: string) => {
@@ -203,7 +166,7 @@ export const InputText = (props?: TInputText) => {
       type: 'keyup',
       fn: (cmp, e) => {
         const event = e as KeyboardEvent;
-        if (!props?.multiline && event.code === 'Enter') {
+        if (event.code === 'Enter') {
           if (props?.blurOnEnter) cmp.elem.blur();
           if (props?.focusToNextOnEnter && !event.shiftKey) {
             const nextCmp = getCmpById(props.focusToNextOnEnter);
@@ -222,20 +185,56 @@ export const InputText = (props?: TInputText) => {
     });
   }
 
+  const getClassAttrString = (classValue?: string | string[]) => {
+    if (!classValue) return '';
+    return `class="${typeof classValue === 'string' ? classValue : classValue.join(' ')}"`;
+  };
+
+  const getSelectedAttrString = (value: string) => {
+    if (value === props?.value) return ' selected="true"';
+    return '';
+  };
+
+  const getSelectHtml = () =>
+    `<select>${
+      props?.options
+        ? props.options.map(
+            (opt) =>
+              `<option value="${opt.value}"${getClassAttrString(opt.class)}${getSelectedAttrString(
+                opt.value
+              )}>${opt.label}</option>`
+          )
+        : ''
+    }</select>`;
+
+  const iconCmp = props?.icon
+    ? CMP({
+        ...props.icon,
+        style: {
+          ...props.icon.style,
+          position: 'absolute',
+          top: '1px',
+          right: '1px',
+          height: 'calc(100% - 2px)',
+          pointerEvents: 'none',
+          padding: '0 2px',
+        },
+      })
+    : '';
+
   const getHtml = () =>
-    `<label class="inputField inputText${
-      props?.multiline ? ' inputTextMulti' : ' inputTextSingle'
-    }"${props?.idAttr ? ` for="${inputId}"` : ''}>
+    `<label class="inputField inputDropdown"${props?.idAttr ? ` for="${inputId}"` : ''}>
       ${labelHtml}
-      <div class="inputValueOuter">
+      <div class="inputValueOuter"${
+        props?.icon ? ' style="position: relative; display: inline-block;"' : ''
+      }>
         ${CMP({
           ...props?.input,
-          tag: props?.multiline ? 'textarea' : 'input',
-          ...(props?.multiline ? { text: props?.value || '' } : {}),
           id: inputId,
           idAttr: props?.idAttr,
           attr: inputAttr,
-          class: 'inputTextElem',
+          html: getSelectHtml(),
+          class: 'inputDropdownElem',
           focus: props?.focus,
           ...(props?.onChange || props?.validationFn
             ? {
@@ -248,29 +247,8 @@ export const InputText = (props?: TInputText) => {
                 },
               }
             : {}),
-          onInput: (_, e) => {
-            const value = (e.target as HTMLInputElement).value;
-            if (props?.validationFn) {
-              validate(value);
-            }
-            props?.onInput && props.onInput(inputTextCmp, e);
-            if (inputTextCmp.props?.wrapperProps) {
-              inputTextCmp.props.wrapperProps.value = value;
-            }
-          },
           onFocus: (_, e) => {
             inputTextCmp.updateClass('inputHasFocus', 'add');
-            if (props?.selectTextOnFocus === true) {
-              (e.currentTarget as HTMLInputElement).setSelectionRange(
-                0,
-                (e.currentTarget as HTMLInputElement).value.length
-              );
-            } else if (props?.selectTextOnFocus === 'start') {
-              (e.currentTarget as HTMLInputElement).setSelectionRange(0, 0);
-            } else if (props?.selectTextOnFocus === 'end') {
-              const valueLength = (e.currentTarget as HTMLInputElement).value.length;
-              (e.currentTarget as HTMLInputElement).setSelectionRange(valueLength, valueLength);
-            }
             props?.onFocus && props.onFocus(inputTextCmp, e);
           },
           onBlur: (_, e) => {
@@ -279,6 +257,7 @@ export const InputText = (props?: TInputText) => {
           },
           ...(listeners.length ? { listeners } : {}),
         })}
+        ${iconCmp}
       </div>
     </label>`;
 
@@ -286,7 +265,7 @@ export const InputText = (props?: TInputText) => {
     id: props?.id || `input-text-cmp_${createNewId()}`,
     idAttr: props?.idAttr,
     html: getHtml,
-    wrapper: (props?: TInputText) => InputText(props),
+    wrapper: (props?: TInputDropdown) => InputDropdown(props),
     wrapperProps: props,
   });
 

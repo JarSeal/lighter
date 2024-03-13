@@ -102,10 +102,9 @@ export type TInputText = {
   Default is false. */
   multiline?: boolean;
 
-  // @TODO
   /* Defines the character counter's maximum character
   count. When set, will show the actual character
-  count in relation to the max value (24/130).
+  count CMP in relation to the max value (24 / 130).
   Default is undefined (no character counter). */
   charCountMax?: number;
 
@@ -167,12 +166,27 @@ export const InputText = (props?: TInputText) => {
   if (props?.placeholder) inputAttr.placeholder = props.placeholder;
 
   // Validation
+  const ERROR_CLASS = 'inputHasError';
+  const COUNTER_OVER_CLASS = 'inputCounterError';
+  let validationError = false;
+  const validateCharCount = (value?: string) => {
+    if (props?.charCountMax === undefined || !value) return;
+    const max = props.charCountMax;
+    const valueLength = value.length || 0;
+    if (max < valueLength) {
+      inputTextCmp.updateClass(ERROR_CLASS, 'add');
+      counterCmp && counterCmp.updateClass(COUNTER_OVER_CLASS, 'add');
+    } else {
+      if (!validationError) inputTextCmp.updateClass(ERROR_CLASS, 'remove');
+      counterCmp && counterCmp.updateClass(COUNTER_OVER_CLASS, 'remove');
+    }
+  };
   const validate = (value?: string) => {
-    const ERROR_CLASS = 'inputHasError';
     if (props?.validationFn) {
       const validationResult = props.validationFn(value, inputTextCmp);
       errorCmp.removeChildren();
       if (validationResult) {
+        validationError = true;
         inputTextCmp.updateClass(ERROR_CLASS, 'add');
         errorCmp.add(
           CMP(
@@ -182,11 +196,14 @@ export const InputText = (props?: TInputText) => {
           )
         );
       } else if (validationResult === '') {
+        validationError = true;
         inputTextCmp.updateClass(ERROR_CLASS, 'add');
       } else {
+        validationError = false;
         inputTextCmp.updateClass(ERROR_CLASS, 'remove');
       }
     }
+    validateCharCount(value);
   };
 
   // Enter and Esc key presses
@@ -222,9 +239,17 @@ export const InputText = (props?: TInputText) => {
     });
   }
 
+  const counterCmp =
+    props?.charCountMax !== undefined
+      ? CMP({
+          text: `${props?.value?.length || 0} / ${props?.charCountMax}`,
+          class: 'inputCharCounter',
+        })
+      : '';
+
   const getHtml = () =>
-    `<label class="inputField inputText${
-      props?.multiline ? ' inputTextMulti' : ' inputTextSingle'
+    `<label class="inputField inputText ${
+      props?.multiline ? 'inputTextMulti' : 'inputTextSingle'
     }"${props?.idAttr ? ` for="${inputId}"` : ''}>
       ${labelHtml}
       <div class="inputValueOuter">
@@ -250,13 +275,13 @@ export const InputText = (props?: TInputText) => {
             : {}),
           onInput: (_, e) => {
             const value = (e.target as HTMLInputElement).value;
-            if (props?.validationFn) {
-              validate(value);
-            }
+            validate(value);
             props?.onInput && props.onInput(inputTextCmp, e);
             if (inputTextCmp.props?.wrapperProps) {
               inputTextCmp.props.wrapperProps.value = value;
             }
+            counterCmp &&
+              counterCmp.update({ text: `${props?.value?.length || 0} / ${props?.charCountMax}` });
           },
           onFocus: (_, e) => {
             inputTextCmp.updateClass('inputHasFocus', 'add');
@@ -280,6 +305,7 @@ export const InputText = (props?: TInputText) => {
           ...(listeners.length ? { listeners } : {}),
         })}
       </div>
+      ${counterCmp}
     </label>`;
 
   const inputTextCmp = CMP({

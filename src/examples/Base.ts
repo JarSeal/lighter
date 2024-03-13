@@ -75,15 +75,17 @@ export const Base = (props?: TProps) => {
           };
         }
         if (!value) return { html: '<button>Required</button>' };
+        if (value.length > 12) return 'Quite long';
         return null;
       },
       // blurOnEnter: true,
       blurOnEsc: true,
       focusToNextOnEnter: 'input-number',
       focusToPrevOnShiftEnter: 'text-input',
-      maxLength: 6,
+      maxLength: 16,
       selectTextOnFocus: 'start',
       multiline: true,
+      charCountMax: 10,
     })
   );
 
@@ -134,7 +136,7 @@ export const Base = (props?: TProps) => {
         { value: '4', label: 'Selection 4' },
         { value: '5', label: 'Selection 5' },
       ],
-      onChange: (cmp, e) => {
+      onChange: (_, e) => {
         const value = (e.currentTarget as HTMLSelectElement).value;
         console.log('Dropdown selection', value);
       },

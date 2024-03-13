@@ -16,7 +16,7 @@ export const Base = (props?: TProps) => {
         );
         nav.update();
       },
-      onClickOutside: (cmp) => console.log('UUTSIDAN', cmp),
+      // onClickOutside: (cmp) => console.log('UUTSIDAN', cmp),
       onFocus: () => console.log('FOCUS'),
       onBlur: () => console.log('BLUR'),
       text: 'jotain',
@@ -125,11 +125,31 @@ export const Base = (props?: TProps) => {
   baseCmp.add(
     InputDropdown({
       label: 'Dropdown',
+      value: '2',
+      options: [
+        { value: '', label: 'Select', class: 'inputEmptySelection' },
+        { value: '1', label: 'Selection 1' },
+        { value: '2', label: 'Selection 2' },
+        { value: '3', label: 'Selection 3' },
+        { value: '4', label: 'Selection 4' },
+        { value: '5', label: 'Selection 5' },
+      ],
+      onChange: (cmp, e) => {
+        const value = (e.currentTarget as HTMLSelectElement).value;
+        console.log('Dropdown selection', value);
+      },
+      validationFn: (value) => {
+        if (value === '') return 'Required';
+        return null;
+      },
+      // icon: { text: 'A', style: { background: 'blue' } },
     })
   );
 
   for (let i = 0; i < 10; i++) {
-    baseCmp.add({ text: Math.random().toString(), onClick: (cmp) => console.log(cmp.props?.text) });
+    baseCmp.add({
+      text: Math.random().toString() /* onClick: (cmp) => console.log(cmp.props?.text) */,
+    });
   }
 
   baseCmp.add({

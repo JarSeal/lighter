@@ -108,6 +108,12 @@ export type TInputText = {
   count in relation to the max value (24/130).
   Default is undefined (no character counter). */
   charCountMax?: number;
+
+  // @TODO
+  /* Regex pattern for the input field. For example,
+  the regex could force only numbers to this field.
+  Default is undefined. */
+  regex?: string;
 };
 
 type TInputAttr = {

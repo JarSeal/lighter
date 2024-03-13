@@ -5,6 +5,7 @@ import {
   type TListener,
   type TProps,
   type TCMP,
+  type TStyle,
   getCmpById,
 } from '../../Lighter/CMP';
 
@@ -37,7 +38,12 @@ export type TInputDropdown = {
 
   // @TODO
   /* Options... */
-  options?: unknown;
+  options?: {
+    label: string;
+    value: string;
+    class?: string | string[];
+    style?: TStyle;
+  }[];
 
   /* Whether the input element has a disabled
   attribute or not. Default is false. */
@@ -78,6 +84,10 @@ export type TInputDropdown = {
   (with an empty string, only the class is added).
   Default is undefined. */
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
+
+  /* A custom icon (CMP) to show on top of the
+  dropdown "down arrow" icon. Default is undefined. */
+  icon?: TProps;
 };
 
 type TInputAttr = {
@@ -117,7 +127,6 @@ export const InputDropdown = (props?: TInputDropdown) => {
 
   // Input attributes
   const inputAttr: TInputAttr = {};
-  inputAttr.value = props?.value || '';
   if (props?.disabled) inputAttr.disabled = 'true';
 
   // Validation
@@ -176,12 +185,49 @@ export const InputDropdown = (props?: TInputDropdown) => {
     });
   }
 
-  const getSelectHtml = () => `<select></select>`;
+  const getClassAttrString = (classValue?: string | string[]) => {
+    if (!classValue) return '';
+    return `class="${typeof classValue === 'string' ? classValue : classValue.join(' ')}"`;
+  };
+
+  const getSelectedAttrString = (value: string) => {
+    if (value === props?.value) return ' selected="true"';
+    return '';
+  };
+
+  const getSelectHtml = () =>
+    `<select>${
+      props?.options
+        ? props.options.map(
+            (opt) =>
+              `<option value="${opt.value}"${getClassAttrString(opt.class)}${getSelectedAttrString(
+                opt.value
+              )}>${opt.label}</option>`
+          )
+        : ''
+    }</select>`;
+
+  const iconCmp = props?.icon
+    ? CMP({
+        ...props.icon,
+        style: {
+          ...props.icon.style,
+          position: 'absolute',
+          top: '1px',
+          right: '1px',
+          height: 'calc(100% - 2px)',
+          pointerEvents: 'none',
+          padding: '0 2px',
+        },
+      })
+    : '';
 
   const getHtml = () =>
     `<label class="inputField inputDropdown"${props?.idAttr ? ` for="${inputId}"` : ''}>
       ${labelHtml}
-      <div class="inputValueOuter">
+      <div class="inputValueOuter"${
+        props?.icon ? ' style="position: relative; display: inline-block;"' : ''
+      }>
         ${CMP({
           ...props?.input,
           id: inputId,
@@ -211,6 +257,7 @@ export const InputDropdown = (props?: TInputDropdown) => {
           },
           ...(listeners.length ? { listeners } : {}),
         })}
+        ${iconCmp}
       </div>
     </label>`;
 

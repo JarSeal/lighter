@@ -37,7 +37,10 @@ export type TInputDropdown = {
   value?: string;
 
   // @TODO
-  /* Options... */
+  /* Options for the dropdown. Must have the
+  label shown in the UI and the value of the
+  selected option. Can also have class and style
+  props. Default is undefined (no options). */
   options?: {
     label: string;
     value: string;

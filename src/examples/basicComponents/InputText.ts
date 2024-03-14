@@ -110,7 +110,8 @@ export type TInputText = {
 
   // @TODO
   /* Regex pattern for the input field. For example,
-  the regex could force only numbers to this field.
+  the regex could force only numbers to this field. This
+  determines what characters are typed to the field.
   Default is undefined. */
   regex?: string;
 };

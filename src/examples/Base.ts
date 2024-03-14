@@ -132,8 +132,15 @@ export const Base = (props?: TProps) => {
         { value: '', label: 'Select', class: 'inputEmptySelection' },
         { value: '1', label: 'Selection 1' },
         { value: '2', label: 'Selection 2' },
-        { value: '3', label: 'Selection 3' },
-        { value: '4', label: 'Selection 4' },
+        { value: '3', label: 'Selection 3', class: 'SOMECLASS' },
+        {
+          label: 'Group',
+          options: [
+            { value: '3.5', label: 'Selection 3.5' },
+            { value: '3.7', label: 'Selection 3.7' },
+          ],
+        },
+        { value: '4', label: 'Selection 4', disabled: true },
         { value: '5', label: 'Selection 5' },
       ],
       onChange: (_, e) => {

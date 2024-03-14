@@ -5,9 +5,24 @@ import {
   type TListener,
   type TProps,
   type TCMP,
-  type TStyle,
   getCmpById,
 } from '../../Lighter/CMP';
+
+export type DropdownBasicOption = {
+  label: string;
+  value: string;
+  class?: string | string[];
+  disabled?: boolean;
+};
+
+export type DropdownOption =
+  | {
+      label: string;
+      options: DropdownBasicOption[];
+      class?: string | string[];
+      disabled?: boolean;
+    }
+  | DropdownBasicOption;
 
 export type TInputDropdown = {
   /* Id to be used for the "for" attribute
@@ -41,12 +56,7 @@ export type TInputDropdown = {
   label shown in the UI and the value of the
   selected option. Can also have class and style
   props. Default is undefined (no options). */
-  options?: {
-    label: string;
-    value: string;
-    class?: string | string[];
-    style?: TStyle;
-  }[];
+  options?: DropdownOption[];
 
   /* Whether the input element has a disabled
   attribute or not. Default is false. */
@@ -188,25 +198,43 @@ export const InputDropdown = (props?: TInputDropdown) => {
     });
   }
 
-  const getClassAttrString = (classValue?: string | string[]) => {
-    if (!classValue) return '';
-    return `class="${typeof classValue === 'string' ? classValue : classValue.join(' ')}"`;
+  const SELECTED_CLASS = 'optionSelected';
+  const getClassAttrString = (opt: DropdownOption) => {
+    if ('value' in opt && !opt.class === undefined) return '';
+    const classValues =
+      opt.class === undefined ? [] : typeof opt.class === 'string' ? [opt.class] : opt.class;
+    if ('value' in opt && opt.value === props?.value) {
+      classValues.push(SELECTED_CLASS);
+    }
+    return `class="${classValues.join(' ')}"`;
   };
 
-  const getSelectedAttrString = (value: string) => {
-    if (value === props?.value) return ' selected="true"';
-    return '';
+  const getAttrString = (opt: DropdownOption) => {
+    let attributes = '';
+    if ('value' in opt && opt.value === props?.value) attributes += ' selected="true"';
+    if (opt.disabled) attributes += ' disabled="true"';
+    return attributes;
   };
 
   const getSelectHtml = () =>
     `<select>${
       props?.options
-        ? props.options.map(
-            (opt) =>
-              `<option value="${opt.value}"${getClassAttrString(opt.class)}${getSelectedAttrString(
-                opt.value
-              )}>${opt.label}</option>`
-          )
+        ? props.options.map((opt) => {
+            if ('value' in opt) {
+              return `<option value="${opt.value}"${getClassAttrString(opt)}${getAttrString(opt)}>${
+                opt.label
+              }</option>`;
+            } else if ('options' in opt) {
+              return `<optgroup label="${opt.label}"${getClassAttrString(opt)}${getAttrString(
+                opt
+              )}>${opt.options.map(
+                (groupOpt) =>
+                  `<option value="${groupOpt.value}"${getClassAttrString(groupOpt)}${getAttrString(
+                    groupOpt
+                  )}>${groupOpt.label}</option>`
+              )}</optgroup>`;
+            }
+          })
         : ''
     }</select>`;
 
@@ -225,41 +253,58 @@ export const InputDropdown = (props?: TInputDropdown) => {
       })
     : '';
 
+  const selectCmp = CMP({
+    ...props?.input,
+    id: inputId,
+    idAttr: props?.idAttr,
+    attr: inputAttr,
+    html: getSelectHtml(),
+    class: 'inputDropdownElem',
+    focus: props?.focus,
+    onChange: (_, e) => {
+      const value = (e.target as HTMLInputElement).value;
+      if (props) props.value = value;
+      const options = selectCmp.elem.children;
+      for (let i = 0; i < options.length; i++) {
+        const option = options[i] as HTMLOptionElement;
+        option.classList.remove(SELECTED_CLASS);
+        option.removeAttribute('selected');
+        if (value === option.value) {
+          option.classList.add(SELECTED_CLASS);
+          option.setAttribute('selected', 'true');
+        }
+        const optionChildren = option.children;
+        for (let j = 0; j < optionChildren.length; j++) {
+          const subOption = optionChildren[j] as HTMLOptionElement;
+          subOption.classList.remove(SELECTED_CLASS);
+          subOption.removeAttribute('selected');
+          if (value === subOption.value) {
+            subOption.classList.add(SELECTED_CLASS);
+            subOption.setAttribute('selected', 'true');
+          }
+        }
+      }
+      if (props?.validationFn) validate(value);
+      props?.onChange && props.onChange(inputTextCmp, e);
+    },
+    onFocus: (_, e) => {
+      inputTextCmp.updateClass('inputHasFocus', 'add');
+      props?.onFocus && props.onFocus(inputTextCmp, e);
+    },
+    onBlur: (_, e) => {
+      inputTextCmp.updateClass('inputHasFocus', 'remove');
+      props?.onBlur && props.onBlur(inputTextCmp, e);
+    },
+    ...(listeners.length ? { listeners } : {}),
+  });
+
   const getHtml = () =>
     `<label class="inputField inputDropdown"${props?.idAttr ? ` for="${inputId}"` : ''}>
       ${labelHtml}
       <div class="inputValueOuter"${
         props?.icon ? ' style="position: relative; display: inline-block;"' : ''
       }>
-        ${CMP({
-          ...props?.input,
-          id: inputId,
-          idAttr: props?.idAttr,
-          attr: inputAttr,
-          html: getSelectHtml(),
-          class: 'inputDropdownElem',
-          focus: props?.focus,
-          ...(props?.onChange || props?.validationFn
-            ? {
-                onChange: (_, e) => {
-                  if (props.validationFn) {
-                    const value = (e.target as HTMLInputElement).value;
-                    validate(value);
-                  }
-                  props.onChange && props.onChange(inputTextCmp, e);
-                },
-              }
-            : {}),
-          onFocus: (_, e) => {
-            inputTextCmp.updateClass('inputHasFocus', 'add');
-            props?.onFocus && props.onFocus(inputTextCmp, e);
-          },
-          onBlur: (_, e) => {
-            inputTextCmp.updateClass('inputHasFocus', 'remove');
-            props?.onBlur && props.onBlur(inputTextCmp, e);
-          },
-          ...(listeners.length ? { listeners } : {}),
-        })}
+        ${selectCmp}
         ${iconCmp}
       </div>
     </label>`;

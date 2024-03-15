@@ -417,7 +417,8 @@ export const InputNumber = (props?: TInputNumber) => {
     focus: props?.focus,
     onInput: (_, e) => {
       let value = Number((e.currentTarget as HTMLInputElement).value);
-      const oldValue = Number(inputNumberCmp.props?.wrapperProps?.value || 0);
+      // const oldValue = Number(inputNumberCmp.props?.wrapperProps?.value || 0);
+      const oldValue = Number(props?.value || 0);
       if (props?.step && props?.stepShift && shiftPressed) {
         const additionCheck = setValue(oldValue + props.step);
         const substractionCheck = setValue(oldValue - props.step);
@@ -438,9 +439,10 @@ export const InputNumber = (props?: TInputNumber) => {
         });
       if (props?.validationFn) validate(value);
       props?.onInput && props.onInput(inputNumberCmp, e);
-      if (inputNumberCmp.props?.wrapperProps) {
-        inputNumberCmp.props.wrapperProps.value = value;
-      }
+      // if (inputNumberCmp.props?.wrapperProps) {
+      //   inputNumberCmp.props.wrapperProps.value = value;
+      // }
+      if (props?.value !== undefined) props.value = value;
       inputCmp.updateAttr({ value });
       if (props?.step && props?.stepShift && shiftPressed) {
         (inputCmp.elem as HTMLInputElement).value = String(value);
@@ -455,9 +457,10 @@ export const InputNumber = (props?: TInputNumber) => {
         });
       if (props?.validationFn) validate(value);
       props?.onChange && props.onChange(inputNumberCmp, e);
-      if (inputNumberCmp.props?.wrapperProps) {
-        inputNumberCmp.props.wrapperProps.value = value;
-      }
+      // if (inputNumberCmp.props?.wrapperProps) {
+      //   inputNumberCmp.props.wrapperProps.value = value;
+      // }
+      if (props?.value !== undefined) props.value = value;
       inputCmp.updateAttr({ value });
       (inputCmp.elem as HTMLInputElement).value = String(value);
     },
@@ -547,13 +550,15 @@ export const InputNumber = (props?: TInputNumber) => {
       </div>
     </label>`;
 
-  const inputNumberCmp = CMP({
-    id: props?.id || `input-number-cmp_${createNewId()}`,
-    idAttr: props?.idAttr,
-    html: getHtml,
-    wrapper: (props?: TInputNumber) => InputNumber(props),
-    wrapperProps: props,
-  });
+  const inputNumberCmp = CMP<TInputNumber>(
+    {
+      id: props?.id || `input-number-cmp_${createNewId()}`,
+      idAttr: props?.idAttr,
+      html: getHtml,
+    },
+    InputNumber,
+    props
+  );
 
   const errorCmp = inputNumberCmp.add(CMP({ class: 'inputErrorMsg' }));
 

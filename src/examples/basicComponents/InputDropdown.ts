@@ -309,13 +309,15 @@ export const InputDropdown = (props?: TInputDropdown) => {
       </div>
     </label>`;
 
-  const inputTextCmp = CMP({
-    id: props?.id || `input-text-cmp_${createNewId()}`,
-    idAttr: props?.idAttr,
-    html: getHtml,
-    wrapper: (props?: TInputDropdown) => InputDropdown(props),
-    wrapperProps: props,
-  });
+  const inputTextCmp = CMP(
+    {
+      id: props?.id || `input-text-cmp_${createNewId()}`,
+      idAttr: props?.idAttr,
+      html: getHtml,
+    },
+    InputDropdown,
+    props
+  );
 
   const errorCmp = inputTextCmp.add(CMP({ class: 'inputErrorMsg' }));
 

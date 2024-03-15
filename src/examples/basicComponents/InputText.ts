@@ -36,8 +36,8 @@ export type TInputText = {
   Default is undefined. */
   input?: TProps;
 
-  /* Input value string. Default is undefined. */
-  value?: string;
+  /* Input value string. Default is an empty string. */
+  value: string;
 
   /* Placeholder text for empty input field. Default
   is undefined. */
@@ -124,7 +124,7 @@ type TInputAttr = {
   placeholder?: string;
 };
 
-export const InputText = (props?: TInputText) => {
+export const InputText = (props: TInputText) => {
   const inputId = `input_${createNewId()}`;
 
   // Label
@@ -278,9 +278,10 @@ export const InputText = (props?: TInputText) => {
             const value = (e.target as HTMLInputElement).value;
             validate(value);
             props?.onInput && props.onInput(inputTextCmp, e);
-            if (inputTextCmp.props?.wrapperProps) {
-              inputTextCmp.props.wrapperProps.value = value;
-            }
+            // if (inputTextCmp.props?.wrapperProps) {
+            //   inputTextCmp.props.wrapperProps.value = value;
+            // }
+            if (props) props.value = value;
             counterCmp &&
               counterCmp.update({ text: `${props?.value?.length || 0} / ${props?.charCountMax}` });
           },
@@ -309,13 +310,15 @@ export const InputText = (props?: TInputText) => {
       ${counterCmp}
     </label>`;
 
-  const inputTextCmp = CMP({
-    id: props?.id || `input-text-cmp_${createNewId()}`,
-    idAttr: props?.idAttr,
-    html: getHtml,
-    wrapper: (props?: TInputText) => InputText(props),
-    wrapperProps: props,
-  });
+  const inputTextCmp = CMP(
+    {
+      id: props?.id || `input-text-cmp_${createNewId()}`,
+      idAttr: props?.idAttr,
+      html: getHtml,
+    },
+    InputText,
+    props
+  );
 
   const errorCmp = inputTextCmp.add(CMP({ class: 'inputErrorMsg' }));
 

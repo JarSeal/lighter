@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // @CONSIDER: there are a lot of use of "delete"
 // for removing object props. These could also be
-// null or undefined.
+// null or undefined. Improves performance.
 
 let rootCMP: TCMP | null = null;
 const cmps: { [key: string]: TCMP } = {};
@@ -20,11 +20,11 @@ const removeWrapper = (id: string) => {
   if (cmpWrappers[id]) delete cmpWrappers[id];
 };
 
-export type TListener = (cmp: TCMP, e: Event | InputEvent) => void;
+export type TListener = (e: Event | InputEvent, cmp: TCMP) => void;
 
 export type TListenerCreator = {
   type: string;
-  fn: ((cmp: TCMP, e: Event) => void) | null;
+  fn: ((e: Event, cmp: TCMP) => void) | null;
   options?: AddEventListenerOptions;
 };
 
@@ -129,8 +129,11 @@ export type TCMP = {
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
   getWrapperProps: <WrapP = undefined>() => WrapP | null;
   // @SUGGESTION:
+  // updateListener: (TListenerCreator) => TCMP;
   // removeListener: (key: string) => TCMP;
+  // removeAllListeners: () => TCMP;
   // removeTimer: (key: string) => TCMP;
+  // removeAllTimers: () => TCMP;
   // getChildCmpById: (id: string) => TCMP;
   // getParentCmpById: (id: string) => TCMP;
 };
@@ -360,7 +363,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   if (props?.onClick) {
     // Add "click" listener
     const onClick = props.onClick;
-    const fn = (e: Event) => onClick(cmp, e);
+    const fn = (e: Event) => onClick(e, cmp);
     listeners.click = { fn, type: 'click' };
     cmp.elem.addEventListener('click', fn, true);
   } else {
@@ -371,7 +374,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   if (props?.onHover) {
     // Add "mousemove" listener
     const onHover = props.onHover;
-    const fn = (e: Event) => onHover(cmp, e);
+    const fn = (e: Event) => onHover(e, cmp);
     listeners.mousemove = { fn, type: 'mousemove' };
     cmp.elem.addEventListener('mousemove', fn, true);
   } else {
@@ -380,7 +383,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   if (props?.onFocus) {
     // Add "focus" listener
     const onFocus = props.onFocus;
-    const fn = (e: Event) => onFocus(cmp, e);
+    const fn = (e: Event) => onFocus(e, cmp);
     listeners.focus = { fn, type: 'focus' };
     cmp.elem.addEventListener('focus', fn, true);
   } else {
@@ -389,7 +392,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   if (props?.onBlur) {
     // Add "blur" listener
     const onBlur = props.onBlur;
-    const fn = (e: Event) => onBlur(cmp, e);
+    const fn = (e: Event) => onBlur(e, cmp);
     listeners.blur = { fn, type: 'blur' };
     cmp.elem.addEventListener('blur', fn, true);
   } else {
@@ -398,7 +401,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   if (props?.onInput) {
     // Add "input" listener
     const onInput = props.onInput;
-    const fn = (e: Event) => onInput(cmp, e);
+    const fn = (e: Event) => onInput(e, cmp);
     listeners.input = { fn, type: 'input' };
     cmp.elem.addEventListener('input', fn, true);
   } else {
@@ -407,7 +410,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   if (props?.onChange) {
     // Add "change" listener
     const onChange = props.onChange;
-    const fn = (e: Event) => onChange(cmp, e);
+    const fn = (e: Event) => onChange(e, cmp);
     listeners.change = { fn, type: 'change' };
     cmp.elem.addEventListener('change', fn, true);
   } else {
@@ -418,7 +421,7 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     for (let i = 0; i < props.listeners.length; i++) {
       const listenerFn = props.listeners[i].fn;
       if (!listenerFn) continue;
-      const fn = (e: Event) => listenerFn(cmp, e);
+      const fn = (e: Event) => listenerFn(e, cmp);
       const type = props.listeners[i].type;
       listeners[type] = {
         fn,
@@ -791,7 +794,7 @@ const createOutsideClickListener = (cmp: TCMP) => {
     window.addEventListener('click', onClickOutsideListener.mainFn);
   }
   const onClickOutside = cmp.props.onClickOutside;
-  onClickOutsideListener.fns[cmp.id] = { fn: (e: Event) => onClickOutside(cmp, e), elem: cmp.elem };
+  onClickOutsideListener.fns[cmp.id] = { fn: (e: Event) => onClickOutside(e, cmp), elem: cmp.elem };
   onClickOutsideListener.count += 1;
 };
 

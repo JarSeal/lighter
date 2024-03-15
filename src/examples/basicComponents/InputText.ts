@@ -219,7 +219,7 @@ export const InputText = (props: TInputText) => {
     listeners = listeners.filter((l) => l.type !== 'keyup');
     listeners.push({
       type: 'keyup',
-      fn: (cmp, e) => {
+      fn: (e, cmp) => {
         const event = e as KeyboardEvent;
         if (!props?.multiline && event.code === 'Enter') {
           if (props?.blurOnEnter) cmp.elem.blur();
@@ -235,7 +235,7 @@ export const InputText = (props: TInputText) => {
         if (event.code === 'Escape') {
           if (props?.blurOnEsc) cmp.elem.blur();
         }
-        if (existingKeyup?.fn) existingKeyup.fn(cmp, e);
+        if (existingKeyup?.fn) existingKeyup.fn(e, cmp);
       },
     });
   }
@@ -265,19 +265,19 @@ export const InputText = (props: TInputText) => {
           focus: props?.focus,
           ...(props?.onChange || props?.validationFn
             ? {
-                onChange: (_, e) => {
+                onChange: (e) => {
                   if (props.validationFn) {
                     const value = (e.target as HTMLInputElement).value;
                     validate(value);
                   }
-                  props.onChange && props.onChange(inputTextCmp, e);
+                  props.onChange && props.onChange(e, inputTextCmp);
                 },
               }
             : {}),
-          onInput: (_, e) => {
+          onInput: (e) => {
             const value = (e.target as HTMLInputElement).value;
             validate(value);
-            props?.onInput && props.onInput(inputTextCmp, e);
+            props?.onInput && props.onInput(e, inputTextCmp);
             // if (inputTextCmp.props?.wrapperProps) {
             //   inputTextCmp.props.wrapperProps.value = value;
             // }
@@ -285,7 +285,7 @@ export const InputText = (props: TInputText) => {
             counterCmp &&
               counterCmp.update({ text: `${props?.value?.length || 0} / ${props?.charCountMax}` });
           },
-          onFocus: (_, e) => {
+          onFocus: (e) => {
             inputTextCmp.updateClass('inputHasFocus', 'add');
             if (props?.selectTextOnFocus === true) {
               (e.currentTarget as HTMLInputElement).setSelectionRange(
@@ -298,11 +298,11 @@ export const InputText = (props: TInputText) => {
               const valueLength = (e.currentTarget as HTMLInputElement).value.length;
               (e.currentTarget as HTMLInputElement).setSelectionRange(valueLength, valueLength);
             }
-            props?.onFocus && props.onFocus(inputTextCmp, e);
+            props?.onFocus && props.onFocus(e, inputTextCmp);
           },
-          onBlur: (_, e) => {
+          onBlur: (e) => {
             inputTextCmp.updateClass('inputHasFocus', 'remove');
-            props?.onBlur && props.onBlur(inputTextCmp, e);
+            props?.onBlur && props.onBlur(e, inputTextCmp);
           },
           ...(listeners.length ? { listeners } : {}),
         })}

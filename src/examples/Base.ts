@@ -18,7 +18,7 @@ export const Base = (props?: TProps) => {
   baseCmp.add(
     Button({
       id: 'clickidi-button',
-      onClick: (cmp) => {
+      onClick: (_, cmp) => {
         cmp.update({ text: 'clicked', tag: 'button', onClickOutside: undefined }, (cmp) =>
           console.log('UPDATED', cmp)
         );
@@ -38,7 +38,7 @@ export const Base = (props?: TProps) => {
     id: 'text-input',
     html: '<input type="text" />',
     onChange: () => console.log('CHANGE'),
-    onInput: (_, e) => {
+    onInput: (e) => {
       const target = e.currentTarget as HTMLInputElement;
       showInputCmp.update({ text: target.value });
     },
@@ -161,7 +161,7 @@ export const Base = (props?: TProps) => {
         { value: '4', label: 'Selection 4', disabled: true },
         { value: '5', label: 'Selection 5' },
       ],
-      onChange: (_, e) => {
+      onChange: (e) => {
         const value = (e.currentTarget as HTMLSelectElement).value;
         console.log('Dropdown selection', value);
       },

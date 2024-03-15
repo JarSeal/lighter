@@ -306,8 +306,8 @@ export const InputText = (props: TInputText) => {
         ...(listeners.length ? { listeners } : {}),
       })}
     </div>
-    ${counterCmp}
   </label>
+  ${counterCmp}
 </div>
 `;
 

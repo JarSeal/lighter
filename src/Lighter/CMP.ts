@@ -169,7 +169,8 @@ export const CMP = (
     add: (child) => addChildCmp(cmp, child),
     remove: () => removeCmp(cmp),
     removeChildren: () => removeCmpChildren(cmp),
-    update: (newProps, callback) => updateCmp(cmp, newProps, callback),
+    update: <WrapP extends TProps>(newProps?: TProps | WrapP, callback?: (cmp: TCMP) => void) =>
+      updateCmp<WrapP>(cmp, newProps, callback),
     updateClass: (newClass, action) => updateCmpClass(cmp, newClass, action),
     updateAttr: (newAttr) => updateCmpAttr(cmp, newAttr),
     removeAttr: (attrKey) => removeCmpAttr(cmp, attrKey),
@@ -221,7 +222,7 @@ export const CMP = (
   // Overwrite toString method
   cmp.toString = () => getTempTemplate(cmp.id);
 
-  return cmp;
+  return cmp as TCMP;
 };
 
 const addChildCmp = (parent: TCMP, child?: TCMP | TProps) => {
@@ -473,7 +474,7 @@ const removeCmpChildren = (cmp: TCMP) => {
   return cmp;
 };
 
-const updateCmp = <WrapP = undefined>(
+const updateCmp = <WrapP extends TProps>(
   cmp: TCMP,
   newProps?: TProps | WrapP,
   callback?: (cmp: TCMP) => void

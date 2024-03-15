@@ -1,11 +1,11 @@
-import { CMP, getCmpById, TCMP, type TProps } from '../Lighter/CMP';
+import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
 import { InputDropdown } from './basicComponents/InputDropdown';
 import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
 
-export const Base = (props?: TProps): TCMP => {
+export const Base = (props?: TProps) => {
   const baseCmp = CMP(props, Base, props);
 
   baseCmp.add(

@@ -1,16 +1,24 @@
 import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
 import { InputDropdown } from './basicComponents/InputDropdown';
-import { InputNumber } from './basicComponents/InputNumber';
+import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
 
 export const Base = (props?: TProps) => {
-  const baseCmp = CMP({ ...props, wrapper: (props) => Base(props), wrapperProps: props });
+  const baseCmp = CMP(props, Base, props);
+
+  baseCmp.add(
+    Button({
+      text: 'Refresh',
+      onClick: () => baseCmp.update(),
+    })
+  );
+
   baseCmp.add(
     Button({
       id: 'clickidi-button',
-      onClick: (cmp) => {
+      onClick: (_, cmp) => {
         cmp.update({ text: 'clicked', tag: 'button', onClickOutside: undefined }, (cmp) =>
           console.log('UPDATED', cmp)
         );
@@ -30,7 +38,7 @@ export const Base = (props?: TProps) => {
     id: 'text-input',
     html: '<input type="text" />',
     onChange: () => console.log('CHANGE'),
-    onInput: (_, e) => {
+    onInput: (e) => {
       const target = e.currentTarget as HTMLInputElement;
       showInputCmp.update({ text: target.value });
     },
@@ -89,40 +97,50 @@ export const Base = (props?: TProps) => {
     })
   );
 
+  const inputNumberCmp = InputNumber({
+    id: 'input-number',
+    value: '',
+    minValue: 0,
+    maxValue: 8000000,
+    unit: '€',
+    label: 'Number input',
+    placeholder: 'Number',
+    showReadOnlyValue: true,
+    hideInputArrows: true,
+    // toLocale: false,
+    canBeEmpty: true,
+    blurOnEsc: true,
+    focusToNextOnEnter: 'text-input',
+    focusToPrevOnShiftEnter: 'input-text',
+    step: 0.001,
+    stepShift: 0.01,
+    input: { style: { width: '120px' } },
+    // roundToStep: true,
+    // decimalCorrectionFactor: 4,
+    roundToFactor: -3,
+    // roundingFunction: 'ceil',
+    // precision: 0,
+    // toLocale: false,
+    selectTextOnFocus: 'end',
+    validationFn: (value) => {
+      if (value === 1.1) return 'Not allowed';
+      return null;
+    },
+  });
+  baseCmp.add(inputNumberCmp);
+
   baseCmp.add(
-    InputNumber({
-      id: 'input-number',
-      value: '',
-      minValue: 0,
-      maxValue: 8000000,
-      unit: '€',
-      label: 'Number input',
-      placeholder: 'Number',
-      showReadOnlyValue: true,
-      hideInputArrows: true,
-      // toLocale: false,
-      canBeEmpty: true,
-      blurOnEsc: true,
-      focusToNextOnEnter: 'text-input',
-      focusToPrevOnShiftEnter: 'input-text',
-      step: 0.001,
-      stepShift: 0.01,
-      input: { style: { width: '120px' } },
-      // roundToStep: true,
-      // decimalCorrectionFactor: 4,
-      roundToFactor: -3,
-      // roundingFunction: 'ceil',
-      // precision: 0,
-      // toLocale: false,
-      selectTextOnFocus: 'end',
-      validationFn: (value) => {
-        if (value === 1.1) return 'Not allowed';
-        return null;
+    Button({
+      text: 'Reset number',
+      onClick: () => {
+        inputNumberCmp.update<TInputNumber>({ value: 0 });
+        // console.log(inputNumberCmp.getWrapperProps());
+        // inputNumberCmp.updateStyle({ background: 'red' });
+        // inputNumberCmp.updateAttr({ disabled: true });
+        // inputNumberCmp.updateClass('tadaa');
       },
     })
   );
-
-  baseCmp.add(InputNumber());
 
   baseCmp.add(
     InputDropdown({
@@ -143,7 +161,7 @@ export const Base = (props?: TProps) => {
         { value: '4', label: 'Selection 4', disabled: true },
         { value: '5', label: 'Selection 5' },
       ],
-      onChange: (_, e) => {
+      onChange: (e) => {
         const value = (e.currentTarget as HTMLSelectElement).value;
         console.log('Dropdown selection', value);
       },

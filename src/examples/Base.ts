@@ -135,9 +135,9 @@ export const Base = (props?: TProps) => {
       onClick: () => {
         inputNumberCmp.update<TInputNumber>({ value: 0 });
         // console.log(inputNumberCmp.getWrapperProps());
-        inputNumberCmp.updateStyle({ background: 'red' });
-        inputNumberCmp.updateAttr({ disabled: true });
-        inputNumberCmp.updateClass('tadaa');
+        // inputNumberCmp.updateStyle({ background: 'red' });
+        // inputNumberCmp.updateAttr({ disabled: true });
+        // inputNumberCmp.updateClass('tadaa');
       },
     })
   );

@@ -1,7 +1,24 @@
 import { v4 as uuidv4 } from 'uuid';
 
+// @CONSIDER: there are a lot of use of "delete"
+// for removing object props. These could also be
+// null or undefined.
+
 let rootCMP: TCMP | null = null;
 const cmps: { [key: string]: TCMP } = {};
+const cmpWrappers: {
+  [key: string]: {
+    wrapper: (props?: unknown) => TCMP;
+    wrapperProps?: unknown;
+  };
+} = {};
+const setWrapper = (id: string, wrapper: (props?: unknown) => TCMP, wrapperProps?: unknown) =>
+  (cmpWrappers[id] = { wrapper: wrapper, wrapperProps });
+const getWrapper = <WrapP = undefined>(id: string) =>
+  cmpWrappers[id] as { wrapper: (props?: WrapP) => TCMP; wrapperProps?: WrapP };
+const removeWrapper = (id: string) => {
+  if (cmpWrappers[id]) delete cmpWrappers[id];
+};
 
 export type TListener = (cmp: TCMP, e: Event | InputEvent) => void;
 
@@ -60,11 +77,12 @@ export type TSettings = {
 };
 
 export type TProps = {
+  settings?: TSettings;
   id?: string;
   idAttr?: boolean;
   attach?: HTMLElement;
-  wrapper?: (props?: { [key: string]: unknown }) => TCMP;
-  wrapperProps?: { [key: string]: unknown };
+  // wrapper?: (props?: { [key: string]: unknown }) => TCMP;
+  // wrapperProps?: { [key: string]: unknown };
   text?: string;
   tag?: string;
   html?: string | ((cmp: TCMP) => string);
@@ -101,7 +119,7 @@ export type TCMP = {
   add: (child?: TCMP | TProps) => TCMP;
   remove: () => TCMP;
   removeChildren: () => TCMP;
-  update: (newProps?: { [key: string]: unknown }, callback?: (cmp: TCMP) => void) => TCMP;
+  update: <WrapP extends TProps>(newProps?: WrapP, callback?: (cmp: TCMP) => void) => TCMP;
   updateClass: (newClass: string | string[], action?: TClassAction) => TCMP;
   updateAttr: (newAttr: TAttr) => TCMP;
   removeAttr: (attrKey: string | string[]) => TCMP;
@@ -111,7 +129,6 @@ export type TCMP = {
   focus: (focusValueToProps?: boolean) => TCMP;
   blur: (focusValueToProps?: boolean) => TCMP;
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
-
   // @SUGGESTION:
   // removeListener: (key: string) => TCMP;
   // removeTimer: (key: string) => TCMP;
@@ -126,7 +143,11 @@ const globalSettings: TSettings = {
   replaceRootDom: true,
 };
 
-export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
+export const CMP = (
+  props?: TProps,
+  wrapper?: ((props?: never) => TCMP) | ((props: never) => TCMP),
+  wrapperProps?: unknown
+): TCMP => {
   if (props?.attach && rootCMP) {
     throw new Error('Root node already created');
   }
@@ -160,6 +181,9 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
     scrollIntoView: (params, timeout) => scrollCmpIntoView(cmp, params, timeout),
   };
 
+  // Create possible wrapper
+  if (wrapper) setWrapper(cmp.id, wrapper as (props?: unknown) => TCMP, wrapperProps);
+
   // Create new element
   const elem = createElem(cmp, props);
   cmp.elem = elem;
@@ -170,12 +194,12 @@ export const CMP = (props?: TProps, settings?: TSettings): TCMP => {
 
   // Check if props have attach and attach to element
   if (props?.attach) {
-    if (settings?.sanitizer) globalSettings.sanitizer = settings.sanitizer;
-    if (settings?.sanitizeAll) globalSettings.sanitizeAll = settings.sanitizeAll;
-    if (settings?.doCheckIsInDom !== undefined)
-      globalSettings.doCheckIsInDom = settings.doCheckIsInDom;
-    if (settings?.replaceRootDom !== undefined)
-      globalSettings.replaceRootDom = settings.replaceRootDom;
+    if (props?.settings?.sanitizer) globalSettings.sanitizer = props?.settings.sanitizer;
+    if (props?.settings?.sanitizeAll) globalSettings.sanitizeAll = props?.settings.sanitizeAll;
+    if (props?.settings?.doCheckIsInDom !== undefined)
+      globalSettings.doCheckIsInDom = props?.settings.doCheckIsInDom;
+    if (props?.settings?.replaceRootDom !== undefined)
+      globalSettings.replaceRootDom = props?.settings.replaceRootDom;
     if (globalSettings.replaceRootDom) {
       props.attach.replaceWith(elem);
     } else {
@@ -427,6 +451,9 @@ const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
     child.remove();
   }
 
+  // Remove possible wrapper
+  removeWrapper(cmp.id);
+
   // Remove elem from dom and cmps
   removeListeners(cmp, true);
   removeAnims(cmp);
@@ -446,33 +473,31 @@ const removeCmpChildren = (cmp: TCMP) => {
   return cmp;
 };
 
-const updateCmp = (
+const updateCmp = <WrapP = undefined>(
   cmp: TCMP,
-  newProps?: { [key: string]: unknown },
+  newProps?: TProps | WrapP,
   callback?: (cmp: TCMP) => void
 ) => {
-  if (cmp.props?.wrapper) {
+  const wrapper = getWrapper<WrapP>(cmp.id);
+  if (wrapper) {
     // Wrapper component type
-    if (cmp.props.attach) rootCMP = null;
-    removeCmp(cmp, true);
     const template = document.createElement('template');
     template.innerHTML = getTempTemplate(cmp.id, 'cmpw');
     const tempElem = template.content.children[0] as HTMLElement;
     cmp.elem.replaceWith(tempElem);
-    const wrapperProps = {
-      ...(cmp.props?.wrapperProps ? cmp.props.wrapperProps : {}),
+    if (cmp.props?.attach) rootCMP = null;
+    const wrapperProps = wrapper.wrapperProps && {
+      ...wrapper.wrapperProps,
       ...newProps,
     };
-    const newCmp = cmp.props.wrapper(wrapperProps);
-    if (newCmp.props) {
-      newCmp.props.wrapperProps = wrapperProps;
-    } else {
-      newCmp.props = wrapperProps;
-    }
-    if (cmp.props.attach) rootCMP = newCmp;
+    // @TODO: fix this, there isn't anymore the reference to the same CMP
+    removeCmp(cmp, true);
+    const newCmp = wrapper.wrapper(wrapperProps);
+    setWrapper(cmp.id, wrapper.wrapper as (props?: unknown) => TCMP, wrapperProps);
     newCmp.id = cmp.id;
     cmp = newCmp;
     cmps[cmp.id] = newCmp;
+    if (cmp.props?.attach) rootCMP = newCmp;
     tempElem.replaceWith(newCmp.elem);
   } else {
     // Added or template compoentn types

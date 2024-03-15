@@ -1,12 +1,20 @@
-import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
+import { CMP, getCmpById, TCMP, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
 import { InputDropdown } from './basicComponents/InputDropdown';
-import { InputNumber } from './basicComponents/InputNumber';
+import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
 import { Nav } from './Nav';
 
-export const Base = (props?: TProps) => {
-  const baseCmp = CMP({ ...props, wrapper: (props) => Base(props), wrapperProps: props });
+export const Base = (props?: TProps): TCMP => {
+  const baseCmp = CMP(props, Base, props);
+
+  baseCmp.add(
+    Button({
+      text: 'Refresh',
+      onClick: () => baseCmp.update(),
+    })
+  );
+
   baseCmp.add(
     Button({
       id: 'clickidi-button',
@@ -89,40 +97,49 @@ export const Base = (props?: TProps) => {
     })
   );
 
+  const inputNumberCmp = InputNumber({
+    id: 'input-number',
+    value: '',
+    minValue: 0,
+    maxValue: 8000000,
+    unit: '€',
+    label: 'Number input',
+    placeholder: 'Number',
+    showReadOnlyValue: true,
+    hideInputArrows: true,
+    // toLocale: false,
+    canBeEmpty: true,
+    blurOnEsc: true,
+    focusToNextOnEnter: 'text-input',
+    focusToPrevOnShiftEnter: 'input-text',
+    step: 0.001,
+    stepShift: 0.01,
+    input: { style: { width: '120px' } },
+    // roundToStep: true,
+    // decimalCorrectionFactor: 4,
+    roundToFactor: -3,
+    // roundingFunction: 'ceil',
+    // precision: 0,
+    // toLocale: false,
+    selectTextOnFocus: 'end',
+    validationFn: (value) => {
+      if (value === 1.1) return 'Not allowed';
+      return null;
+    },
+  });
+  baseCmp.add(inputNumberCmp);
+
   baseCmp.add(
-    InputNumber({
-      id: 'input-number',
-      value: '',
-      minValue: 0,
-      maxValue: 8000000,
-      unit: '€',
-      label: 'Number input',
-      placeholder: 'Number',
-      showReadOnlyValue: true,
-      hideInputArrows: true,
-      // toLocale: false,
-      canBeEmpty: true,
-      blurOnEsc: true,
-      focusToNextOnEnter: 'text-input',
-      focusToPrevOnShiftEnter: 'input-text',
-      step: 0.001,
-      stepShift: 0.01,
-      input: { style: { width: '120px' } },
-      // roundToStep: true,
-      // decimalCorrectionFactor: 4,
-      roundToFactor: -3,
-      // roundingFunction: 'ceil',
-      // precision: 0,
-      // toLocale: false,
-      selectTextOnFocus: 'end',
-      validationFn: (value) => {
-        if (value === 1.1) return 'Not allowed';
-        return null;
+    Button({
+      text: 'Reset number',
+      onClick: () => {
+        inputNumberCmp.update<TInputNumber>({ value: 0 });
+        inputNumberCmp.updateStyle({ background: 'red' });
+        inputNumberCmp.updateAttr({ disabled: true });
+        inputNumberCmp.updateClass('tadaa');
       },
     })
   );
-
-  baseCmp.add(InputNumber());
 
   baseCmp.add(
     InputDropdown({

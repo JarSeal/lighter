@@ -81,8 +81,6 @@ export type TProps = {
   id?: string;
   idAttr?: boolean;
   attach?: HTMLElement;
-  // wrapper?: (props?: { [key: string]: unknown }) => TCMP;
-  // wrapperProps?: { [key: string]: unknown };
   text?: string;
   tag?: string;
   html?: string | ((cmp: TCMP) => string);
@@ -129,6 +127,7 @@ export type TCMP = {
   focus: (focusValueToProps?: boolean) => TCMP;
   blur: (focusValueToProps?: boolean) => TCMP;
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
+  getWrapperProps: <WrapP = undefined>() => WrapP | null;
   // @SUGGESTION:
   // removeListener: (key: string) => TCMP;
   // removeTimer: (key: string) => TCMP;
@@ -155,9 +154,11 @@ export const CMP = (
     throw new Error(`Id is already in use / taken: ${props.id}`);
   }
 
+  const id = props?.id || uuidv4();
+
   // Create cmp object
   const cmp: TCMP = {
-    id: props?.id || uuidv4(),
+    id,
     children: [],
     props,
     elem: null as unknown as HTMLElement,
@@ -180,10 +181,11 @@ export const CMP = (
     focus: (focusValueToProps) => focusCmp(cmp, focusValueToProps),
     blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
     scrollIntoView: (params, timeout) => scrollCmpIntoView(cmp, params, timeout),
+    getWrapperProps: <WrapP>(): WrapP | null => getWrapper<WrapP>(id)?.wrapperProps || null,
   };
 
   // Create possible wrapper
-  if (wrapper) setWrapper(cmp.id, wrapper as (props?: unknown) => TCMP, wrapperProps);
+  if (wrapper) setWrapper(id, wrapper as (props?: unknown) => TCMP, wrapperProps);
 
   // Create new element
   const elem = createElem(cmp, props);
@@ -214,13 +216,13 @@ export const CMP = (
   }
 
   // Add cmp to list
-  cmps[cmp.id] = cmp;
+  cmps[id] = cmp;
 
   // Check for child <cmp> tags and replace possible tempTemplates
   addTemplateChildCmp(cmp);
 
   // Overwrite toString method
-  cmp.toString = () => getTempTemplate(cmp.id);
+  cmp.toString = () => getTempTemplate(id);
 
   return cmp as TCMP;
 };
@@ -491,17 +493,15 @@ const updateCmp = <WrapP extends TProps>(
       ...wrapper.wrapperProps,
       ...newProps,
     };
-    // @TODO: fix this, there isn't anymore the reference to the same CMP
-    removeCmp(cmp, true);
-    const newCmp = wrapper.wrapper(wrapperProps);
     setWrapper(cmp.id, wrapper.wrapper as (props?: unknown) => TCMP, wrapperProps);
-    newCmp.id = cmp.id;
-    cmp = newCmp;
-    cmps[cmp.id] = newCmp;
-    if (cmp.props?.attach) rootCMP = newCmp;
-    tempElem.replaceWith(newCmp.elem);
+    cmp.removeChildren();
+    delete cmps[cmp.id];
+    const newCmp = wrapper.wrapper(wrapperProps);
+    replaceCmpWithAnother(cmp, newCmp);
+    if (cmp.props?.attach) rootCMP = cmp;
+    tempElem.replaceWith(cmp.elem);
   } else {
-    // Added or template compoentn types
+    // Added or template component type
     cmp.props = { ...cmp.props, ...newProps };
     const elem = createElem(cmp, cmp.props);
     cmp.elem.replaceWith(elem);
@@ -822,3 +822,26 @@ const removeAnims = (cmp: TCMP) => {
 
 const setPropsValue = (cmp: TCMP, props: Partial<TProps>) =>
   (cmp.props = { ...cmp.props, ...props });
+
+const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
+  const id = oldCmp.id;
+
+  // Props
+  const attach = oldCmp.props?.attach;
+  const settings = oldCmp.props?.settings;
+  oldCmp.props = newCmp.props;
+  if (oldCmp.props?.id) oldCmp.props.id = id;
+  if (attach && oldCmp.props?.attach) oldCmp.props.attach = attach;
+  if (settings && oldCmp.props?.settings) oldCmp.props.settings = settings;
+
+  // Do not reference the parent, parentElem or the functions,
+  // reference everything else.
+  oldCmp.id = id;
+  oldCmp.elem = newCmp.elem;
+  oldCmp.children = newCmp.children;
+  oldCmp.listeners = newCmp.listeners;
+  oldCmp.timers = newCmp.timers;
+
+  // Set the replaced cmp back to cache
+  cmps[id] = oldCmp;
+};

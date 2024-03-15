@@ -134,6 +134,7 @@ export const Base = (props?: TProps) => {
       text: 'Reset number',
       onClick: () => {
         inputNumberCmp.update<TInputNumber>({ value: 0 });
+        // console.log(inputNumberCmp.getWrapperProps());
         inputNumberCmp.updateStyle({ background: 'red' });
         inputNumberCmp.updateAttr({ disabled: true });
         inputNumberCmp.updateClass('tadaa');

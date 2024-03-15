@@ -370,7 +370,7 @@ export const InputNumber = (props?: TInputNumber) => {
     listeners = listeners.filter((l) => l.type !== 'keyup');
     listeners.push({
       type: 'keyup',
-      fn: (cmp, e) => {
+      fn: (e, cmp) => {
         const event = e as KeyboardEvent;
         shiftPressed = event.shiftKey;
         if (event.code === 'Enter') {
@@ -387,7 +387,7 @@ export const InputNumber = (props?: TInputNumber) => {
         if (event.code === 'Escape') {
           if (props?.blurOnEsc) cmp.elem.blur();
         }
-        if (existingKeyup?.fn) existingKeyup.fn(cmp, e);
+        if (existingKeyup?.fn) existingKeyup.fn(e, cmp);
       },
     });
   }
@@ -398,10 +398,10 @@ export const InputNumber = (props?: TInputNumber) => {
     listeners = listeners.filter((l) => l.type !== 'keydown');
     listeners.push({
       type: 'keydown',
-      fn: (cmp, e) => {
+      fn: (e, cmp) => {
         const event = e as KeyboardEvent;
         shiftPressed = event.shiftKey;
-        if (existingKeydown?.fn) existingKeydown.fn(cmp, e);
+        if (existingKeydown?.fn) existingKeydown.fn(e, cmp);
       },
     });
   }
@@ -415,9 +415,10 @@ export const InputNumber = (props?: TInputNumber) => {
     attr: inputAttr,
     ...(props?.showReadOnlyValue ? { style: { ...props?.input?.style, opacity: 0 } } : {}),
     focus: props?.focus,
-    onInput: (_, e) => {
+    onInput: (e) => {
       let value = Number((e.currentTarget as HTMLInputElement).value);
-      const oldValue = Number(inputNumberCmp.props?.wrapperProps?.value || 0);
+      // const oldValue = Number(inputNumberCmp.props?.wrapperProps?.value || 0);
+      const oldValue = Number(props?.value || 0);
       if (props?.step && props?.stepShift && shiftPressed) {
         const additionCheck = setValue(oldValue + props.step);
         const substractionCheck = setValue(oldValue - props.step);
@@ -437,16 +438,17 @@ export const InputNumber = (props?: TInputNumber) => {
           text: setNumberToLocaleString(setValue(value), props?.toLocale, props?.placeholder),
         });
       if (props?.validationFn) validate(value);
-      props?.onInput && props.onInput(inputNumberCmp, e);
-      if (inputNumberCmp.props?.wrapperProps) {
-        inputNumberCmp.props.wrapperProps.value = value;
-      }
+      props?.onInput && props.onInput(e, inputNumberCmp);
+      // if (inputNumberCmp.props?.wrapperProps) {
+      //   inputNumberCmp.props.wrapperProps.value = value;
+      // }
+      if (props?.value !== undefined) props.value = value;
       inputCmp.updateAttr({ value });
       if (props?.step && props?.stepShift && shiftPressed) {
         (inputCmp.elem as HTMLInputElement).value = String(value);
       }
     },
-    onChange: (_, e) => {
+    onChange: (e) => {
       const value = setValue((e.currentTarget as HTMLInputElement).value);
       readOnlyValueCmp &&
         readOnlyValueCmp.update({
@@ -454,14 +456,15 @@ export const InputNumber = (props?: TInputNumber) => {
           text: setNumberToLocaleString(setValue(value), props?.toLocale, props?.placeholder),
         });
       if (props?.validationFn) validate(value);
-      props?.onChange && props.onChange(inputNumberCmp, e);
-      if (inputNumberCmp.props?.wrapperProps) {
-        inputNumberCmp.props.wrapperProps.value = value;
-      }
+      props?.onChange && props.onChange(e, inputNumberCmp);
+      // if (inputNumberCmp.props?.wrapperProps) {
+      //   inputNumberCmp.props.wrapperProps.value = value;
+      // }
+      if (props?.value !== undefined) props.value = value;
       inputCmp.updateAttr({ value });
       (inputCmp.elem as HTMLInputElement).value = String(value);
     },
-    onBlur: (_, e) => {
+    onBlur: (e) => {
       shiftPressed = false;
       inputNumberCmp.updateClass('inputHasFocus', 'remove');
       const value = setValue((e.currentTarget as HTMLInputElement).value);
@@ -480,11 +483,11 @@ export const InputNumber = (props?: TInputNumber) => {
               : 'remove'
           );
       }
-      props?.onBlur && props.onBlur(inputNumberCmp, e);
+      props?.onBlur && props.onBlur(e, inputNumberCmp);
       inputCmp.updateAttr({ value });
       (inputCmp.elem as HTMLInputElement).value = String(value);
     },
-    onFocus: (_, e) => {
+    onFocus: (e) => {
       inputNumberCmp.updateClass('inputHasFocus', 'add');
       if (props?.selectTextOnFocus === true) {
         const elem = e.currentTarget as HTMLInputElement;
@@ -506,7 +509,7 @@ export const InputNumber = (props?: TInputNumber) => {
         inputCmp.updateStyle({ opacity: 1 });
         readOnlyValueCmp.updateStyle({ display: 'none' });
       }
-      props?.onFocus && props.onFocus(inputNumberCmp, e);
+      props?.onFocus && props.onFocus(e, inputNumberCmp);
     },
     ...(listeners.length ? { listeners } : {}),
   });
@@ -533,27 +536,30 @@ export const InputNumber = (props?: TInputNumber) => {
       )
     : '';
 
-  const getHtml = () =>
-    `<label class="inputField inputNumber"${props?.idAttr ? ` for="${inputId}"` : ''}>
-      ${labelHtml}
-      <div class="inputValueOuter"${props?.unit ? ' style="display: flex;"' : ''}>
-        <div class="inputValueInner"${
-          props?.showReadOnlyValue ? ' style="position: relative;"' : ''
-        }>
-          ${inputCmp}
-          ${readOnlyValueCmp}
-        </div>
-        ${unitCmp}
+  const getHtml = () => `
+<div class="inputField inputNumber">
+  <label${props?.idAttr ? ` for="${inputId}"` : ''}>
+    ${labelHtml}
+    <div class="inputValueOuter"${props?.unit ? ' style="display: flex;"' : ''}>
+      <div class="inputValueInner"${props?.showReadOnlyValue ? ' style="position: relative;"' : ''}>
+        ${inputCmp}
+        ${readOnlyValueCmp}
       </div>
-    </label>`;
+      ${unitCmp}
+    </div>
+  </label>
+</div>
+`;
 
-  const inputNumberCmp = CMP({
-    id: props?.id || `input-number-cmp_${createNewId()}`,
-    idAttr: props?.idAttr,
-    html: getHtml,
-    wrapper: (props?: TInputNumber) => InputNumber(props),
-    wrapperProps: props,
-  });
+  const inputNumberCmp = CMP(
+    {
+      id: props?.id || `input-number-cmp_${createNewId()}`,
+      idAttr: props?.idAttr,
+      html: getHtml,
+    },
+    InputNumber,
+    props
+  );
 
   const errorCmp = inputNumberCmp.add(CMP({ class: 'inputErrorMsg' }));
 

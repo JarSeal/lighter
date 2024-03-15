@@ -22,7 +22,7 @@ export const Nav = () => {
         { style: { color: 'red' }, duration: 2000, gotoIndex: 0 },
       ],
       style: { transition: 'color 0.7s linear' },
-      onClick: (cmp) => {
+      onClick: (_, cmp) => {
         cmp.updateAnim([
           { style: { color: 'lime' }, duration: 2000 },
           { style: { color: 'blue' }, duration: 2000, gotoIndex: 0 },
@@ -35,7 +35,7 @@ export const Nav = () => {
       idAttr: true,
       style: { color: 'lime' },
       class: 'someClass',
-      onClick: (cmp) => {
+      onClick: (_, cmp) => {
         console.log('DYNAMIC CLICKED!', cmp.id);
         if (cmp.elem.style.color === 'red') {
           cmp.updateStyle({ color: 'blue' });
@@ -48,7 +48,7 @@ export const Nav = () => {
       tag: 'li',
       text: 'Another dynamic CMP in template',
       idAttr: true,
-      onClick: (cmp) => {
+      onClick: (_, cmp) => {
         console.log('DYNAMIC22222 CLICKED!', cmp.id);
         cmp.remove();
       },
@@ -58,7 +58,7 @@ export const Nav = () => {
       text: 'One more dynamic CMP in template',
       idAttr: true,
       class: ['someClass', 'otherClass'],
-      onClick: (cmp) => {
+      onClick: (_, cmp) => {
         console.log('DYNAMIC333 CLICKED!', cmp.props);
         cmp.updateClass('someClass', 'toggle');
         if (cmp.props?.class?.includes('someClass')) {

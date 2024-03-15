@@ -177,7 +177,7 @@ export const InputDropdown = (props?: TInputDropdown) => {
     listeners = listeners.filter((l) => l.type !== 'keyup');
     listeners.push({
       type: 'keyup',
-      fn: (cmp, e) => {
+      fn: (e, cmp) => {
         const event = e as KeyboardEvent;
         if (event.code === 'Enter') {
           if (props?.blurOnEnter) cmp.elem.blur();
@@ -193,7 +193,7 @@ export const InputDropdown = (props?: TInputDropdown) => {
         if (event.code === 'Escape') {
           if (props?.blurOnEsc) cmp.elem.blur();
         }
-        if (existingKeyup?.fn) existingKeyup.fn(cmp, e);
+        if (existingKeyup?.fn) existingKeyup.fn(e, cmp);
       },
     });
   }
@@ -261,7 +261,7 @@ export const InputDropdown = (props?: TInputDropdown) => {
     html: getSelectHtml(),
     class: 'inputDropdownElem',
     focus: props?.focus,
-    onChange: (_, e) => {
+    onChange: (e) => {
       const value = (e.target as HTMLInputElement).value;
       if (props) props.value = value;
       const options = selectCmp.elem.children;
@@ -285,37 +285,42 @@ export const InputDropdown = (props?: TInputDropdown) => {
         }
       }
       if (props?.validationFn) validate(value);
-      props?.onChange && props.onChange(inputTextCmp, e);
+      props?.onChange && props.onChange(e, inputTextCmp);
     },
-    onFocus: (_, e) => {
+    onFocus: (e) => {
       inputTextCmp.updateClass('inputHasFocus', 'add');
-      props?.onFocus && props.onFocus(inputTextCmp, e);
+      props?.onFocus && props.onFocus(e, inputTextCmp);
     },
-    onBlur: (_, e) => {
+    onBlur: (e) => {
       inputTextCmp.updateClass('inputHasFocus', 'remove');
-      props?.onBlur && props.onBlur(inputTextCmp, e);
+      props?.onBlur && props.onBlur(e, inputTextCmp);
     },
     ...(listeners.length ? { listeners } : {}),
   });
 
-  const getHtml = () =>
-    `<label class="inputField inputDropdown"${props?.idAttr ? ` for="${inputId}"` : ''}>
-      ${labelHtml}
-      <div class="inputValueOuter"${
-        props?.icon ? ' style="position: relative; display: inline-block;"' : ''
-      }>
-        ${selectCmp}
-        ${iconCmp}
-      </div>
-    </label>`;
+  const getHtml = () => `
+<div class="inputField inputDropdown">
+  <label${props?.idAttr ? ` for="${inputId}"` : ''}>
+    ${labelHtml}
+    <div class="inputValueOuter"${
+      props?.icon ? ' style="position: relative; display: inline-block;"' : ''
+    }>
+      ${selectCmp}
+      ${iconCmp}
+    </div>
+  </label>
+</div>
+`;
 
-  const inputTextCmp = CMP({
-    id: props?.id || `input-text-cmp_${createNewId()}`,
-    idAttr: props?.idAttr,
-    html: getHtml,
-    wrapper: (props?: TInputDropdown) => InputDropdown(props),
-    wrapperProps: props,
-  });
+  const inputTextCmp = CMP(
+    {
+      id: props?.id || `input-text-cmp_${createNewId()}`,
+      idAttr: props?.idAttr,
+      html: getHtml,
+    },
+    InputDropdown,
+    props
+  );
 
   const errorCmp = inputTextCmp.add(CMP({ class: 'inputErrorMsg' }));
 

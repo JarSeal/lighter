@@ -298,16 +298,19 @@ export const InputDropdown = (props?: TInputDropdown) => {
     ...(listeners.length ? { listeners } : {}),
   });
 
-  const getHtml = () =>
-    `<label class="inputField inputDropdown"${props?.idAttr ? ` for="${inputId}"` : ''}>
-      ${labelHtml}
-      <div class="inputValueOuter"${
-        props?.icon ? ' style="position: relative; display: inline-block;"' : ''
-      }>
-        ${selectCmp}
-        ${iconCmp}
-      </div>
-    </label>`;
+  const getHtml = () => `
+<div class="inputField inputDropdown">
+  <label${props?.idAttr ? ` for="${inputId}"` : ''}>
+    ${labelHtml}
+    <div class="inputValueOuter"${
+      props?.icon ? ' style="position: relative; display: inline-block;"' : ''
+    }>
+      ${selectCmp}
+      ${iconCmp}
+    </div>
+  </label>
+</div>
+`;
 
   const inputTextCmp = CMP(
     {

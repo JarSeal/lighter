@@ -536,19 +536,20 @@ export const InputNumber = (props?: TInputNumber) => {
       )
     : '';
 
-  const getHtml = () =>
-    `<label class="inputField inputNumber"${props?.idAttr ? ` for="${inputId}"` : ''}>
-      ${labelHtml}
-      <div class="inputValueOuter"${props?.unit ? ' style="display: flex;"' : ''}>
-        <div class="inputValueInner"${
-          props?.showReadOnlyValue ? ' style="position: relative;"' : ''
-        }>
-          ${inputCmp}
-          ${readOnlyValueCmp}
-        </div>
-        ${unitCmp}
+  const getHtml = () => `
+<div class="inputField inputNumber">
+  <label${props?.idAttr ? ` for="${inputId}"` : ''}>
+    ${labelHtml}
+    <div class="inputValueOuter"${props?.unit ? ' style="display: flex;"' : ''}>
+      <div class="inputValueInner"${props?.showReadOnlyValue ? ' style="position: relative;"' : ''}>
+        ${inputCmp}
+        ${readOnlyValueCmp}
       </div>
-    </label>`;
+      ${unitCmp}
+    </div>
+  </label>
+</div>
+`;
 
   const inputNumberCmp = CMP(
     {

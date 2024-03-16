@@ -1,4 +1,4 @@
-import { CMP, type TAttr, type TProps, type TStyle } from '../../Lighter/CMP';
+import { CMP, createNewId, type TProps } from '../../Lighter/CMP';
 
 export type TTooltip = {
   /* Id to be used for the "for" attribute
@@ -6,16 +6,9 @@ export type TTooltip = {
   input_[id] that will be created for the input CMP. */
   id?: string;
 
-  /* Whether to add the for="id" attribute and the
-  input's id attribute to the elements. Default is false. */
-  idAttr?: boolean;
-
-  // @TODO: add to other example components
-  /* Root elem basic attributes. Defaults
-  are undefined. */
-  class?: string | string[];
-  style?: TStyle;
-  attr?: TAttr;
+  /* Tag to overwrite the default tags. Defaults are
+  'button' for clicks and 'span' for hovers. */
+  tag?: string;
 
   /* The trigger that when hovered (or clicked) will
   trigger the tooltip. Required prop. */
@@ -29,11 +22,30 @@ export type TTooltip = {
   a focus (it will be a button) will open the tooltip.
   Default is true. */
   showOnClick?: boolean;
+
+  // @TODO
+  /* How the Tooltip should align with the trigger.
+  Default is 'top-center', but if autoAlign is on,
+  then the alignment could change whether the
+  Tooltip has enough space to show fully or not. */
+  align?:
+    | 'top-right'
+    | 'top-center'
+    | 'top-left'
+    | 'bottom-right'
+    | 'bottom-center'
+    | 'bottom-left';
+
+  // @TODO
+  /* Whether to auto align if the Tooltip does not
+  have enough space to show fully. Default is true. */
+  autoAlign?: boolean;
 };
 
-export const Tooltip = <TTooltip>(props: TTooltip) => {
-  const { id, idAttr, class: classValues, style, attr, trigger, tooltip, showOnClick } = props;
+export const Tooltip = (props: TTooltip) => {
+  const { id: idProp, tag, trigger, tooltip, showOnClick } = props;
   let showTooltip = false;
+  const id = idProp || createNewId();
 
   const triggerCmpProps =
     typeof trigger === 'string'
@@ -41,24 +53,28 @@ export const Tooltip = <TTooltip>(props: TTooltip) => {
           text: trigger,
         }
       : trigger;
-  const outerCmp = CMP<TTooltip>({
-    ...triggerCmpProps,
-    ...(showOnClick !== false ? { tag: 'button' } : { tag: 'span' }),
-    ...(showOnClick !== false
-      ? {
-          onClick: () => {
-            console.log('TRIGGER_CLICK');
-            if (showTooltip) {
-              showTooltip = false;
-            } else {
-              showTooltip = true;
-            }
-          },
-        }
-      : {}),
-    wrapper: Tooltip,
-    wrapperProps: props,
-  });
+  const outerCmp = CMP(
+    {
+      ...(showOnClick !== false ? { tag: 'button' } : { tag: 'span' }),
+      ...triggerCmpProps,
+      ...(showOnClick !== false
+        ? {
+            onClick: () => {
+              console.log('TRIGGER_CLICK');
+              if (showTooltip) {
+                showTooltip = false;
+              } else {
+                showTooltip = true;
+              }
+            },
+          }
+        : {}),
+      // @TODO: add hover listener
+      ...(!showOnClick ? {} : {}),
+    },
+    Tooltip,
+    props
+  );
 
   return outerCmp;
 };

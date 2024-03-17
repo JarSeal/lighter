@@ -100,6 +100,11 @@ export type TProps = {
   onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: TListenerCreator[];
   focus?: boolean;
+
+  // @TODO
+  // onWindowResize?: TListener; // This is going to be the same as onClickOutside
+  // stylesTagToHead? string; // Styles tag content to be added to head
+  // stylesTag?: string; // Styles tag content to be added to CMP
 };
 
 export type TCMP = {
@@ -451,10 +456,17 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
 };
 
 const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
-  // Check children
+  const id = cmp.id;
+
+  // Remove children CMPs
   for (let i = 0; i < cmp.children.length; i++) {
     const child = cmp.children[i];
     child.remove();
+  }
+
+  // Remove reference from parent
+  if (cmp.parent?.children.length) {
+    cmp.parent.children = cmp.parent.children.filter((child) => child.id !== id);
   }
 
   // Remove possible wrapper
@@ -463,7 +475,9 @@ const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
   // Remove elem from dom and cmps
   removeListeners(cmp, true);
   removeAnims(cmp);
-  if (!doNotRemoveElem) cmp.elem.remove();
+  if (!doNotRemoveElem) {
+    cmp.elem.remove();
+  }
   delete cmps[cmp.id];
 
   if (cmp.props?.onRemoveCmp) cmp.props.onRemoveCmp(cmp);

@@ -3,6 +3,7 @@ import { Button } from './basicComponents/Button';
 import { InputDropdown } from './basicComponents/InputDropdown';
 import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
+import { Tooltip } from './basicComponents/Tooltip';
 import { Nav } from './Nav';
 
 export const Base = (props?: TProps) => {
@@ -141,6 +142,14 @@ export const Base = (props?: TProps) => {
       },
     })
   );
+
+  baseCmp
+    .add(Tooltip({ trigger: 'Tooltip', tooltip: 'This is the tooltip text' }))
+    .updateStyle({ display: 'block', margin: '16px 0' });
+
+  baseCmp
+    .add(Tooltip({ trigger: 'Tooltip', tooltip: 'This is the tooltip text' }))
+    .updateStyle({ display: 'block', margin: '16px 0 16px 200px' });
 
   baseCmp.add(
     InputDropdown({

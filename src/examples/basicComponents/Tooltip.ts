@@ -170,12 +170,15 @@ const css = `
   padding: 0;
   border: 0;
   overflow: hidden;
+  opacity: 0;
 }
 .tooltipTrigger.hoverable:hover .tooltip {
   height: auto;
   padding: 8px;
   border: 1px solid #333;
   overflow: visible;
+  opacity: 1;
+  transition: opacity 0.17s ease-out;
 }
 .tooltip {
   position: absolute;

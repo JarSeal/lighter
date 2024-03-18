@@ -862,3 +862,20 @@ const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
   // Set the replaced cmp back to cache
   cmps[id] = oldCmp;
 };
+
+const stylesInHead: { [key: string]: boolean } = {};
+export const addStylesToHead = (id: string, css: string) => {
+  if (stylesInHead[id]) return;
+
+  const titleElem = document.querySelector('head title');
+  const styleElem = document.createElement('style');
+  styleElem.textContent = css;
+  if (titleElem) {
+    titleElem.insertAdjacentElement('afterend', styleElem);
+  } else {
+    const headElem = document.querySelector('head');
+    if (headElem) headElem.appendChild(styleElem);
+  }
+
+  stylesInHead[id] = true;
+};

@@ -151,7 +151,7 @@ export const Base = (props?: TProps) => {
         trigger: 'Tooltip',
         tooltip: 'This is the tooltip text',
         isShowing: true,
-        showOnClick: false,
+        showOnHover: true,
       })
     )
     .updateStyle({ margin: '16px 0' });

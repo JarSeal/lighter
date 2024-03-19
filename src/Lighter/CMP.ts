@@ -36,20 +36,7 @@ export type TListenerCache = {
 
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
-export type TAnimClass = {
-  class: string | string[];
-  duration: number;
-  gotoIndex?: number;
-  action?: TClassAction;
-};
-
 export type TStyle = { [key: string]: string | number | null };
-
-export type TAnimStyle = {
-  style: TStyle;
-  duration: number;
-  gotoIndex?: number;
-};
 
 export type TAttr = { [key: string]: unknown };
 
@@ -92,6 +79,7 @@ export type TProps = {
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
+  onHoverOutside?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
   onInput?: TListener;
@@ -103,8 +91,8 @@ export type TProps = {
 
   // @TODO
   // onWindowResize?: TListener; // This is going to be the same as onClickOutside
-  // stylesTagToHead? string; // Styles tag content to be added to head
-  // stylesTag?: string; // Styles tag content to be added to CMP
+  // onMouseover?: TListener;
+  // onMouseout?: TListener; // This is going to be the same as onClickOutside
 };
 
 export type TCMP = {
@@ -384,6 +372,15 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
     cmp.elem.addEventListener('mousemove', fn, true);
   } else {
     if (listeners.mousemove || listeners.mousemove === null) delete listeners.mousemove;
+  }
+  if (props?.onHoverOutside) {
+    // Add "mouseleave" listener
+    const onHoverOutside = props.onHoverOutside;
+    const fn = (e: Event) => onHoverOutside(e, cmp);
+    listeners.mouseleave = { fn, type: 'mouseleave' };
+    cmp.elem.addEventListener('mouseleave', fn, true);
+  } else {
+    if (listeners.mouseleave || listeners.mouseleave === null) delete listeners.mouseleave;
   }
   if (props?.onFocus) {
     // Add "focus" listener
@@ -775,6 +772,12 @@ const scrollCmpIntoView = (
   return cmp;
 };
 
+const checkMatchingParent = (elemToCheck: HTMLElement | null, elemTarget: HTMLElement): boolean => {
+  if (!elemToCheck) return false;
+  if (elemToCheck === elemTarget) return true;
+  return checkMatchingParent(elemToCheck.parentElement, elemTarget);
+};
+
 const onClickOutsideListener: {
   count: number;
   fns: { [key: string]: { fn: (e: Event) => void; elem: HTMLElement } };
@@ -792,20 +795,14 @@ const onClickOutsideListener: {
   },
 };
 
-const checkMatchingParent = (elemToCheck: HTMLElement | null, elemTarget: HTMLElement): boolean => {
-  if (!elemToCheck) return false;
-  if (elemToCheck === elemTarget) return true;
-  return checkMatchingParent(elemToCheck.parentElement, elemTarget);
-};
-
 const createOutsideClickListener = (cmp: TCMP) => {
   if (!cmp.props?.onClickOutside) {
     removeOutsideClickListener(cmp);
     return;
   }
   if (onClickOutsideListener.count === 0) {
-    window.removeEventListener('click', onClickOutsideListener.mainFn);
-    window.addEventListener('click', onClickOutsideListener.mainFn);
+    document.removeEventListener('click', onClickOutsideListener.mainFn);
+    document.addEventListener('click', onClickOutsideListener.mainFn);
   }
   const onClickOutside = cmp.props.onClickOutside;
   onClickOutsideListener.fns[cmp.id] = { fn: (e: Event) => onClickOutside(e, cmp), elem: cmp.elem };
@@ -815,7 +812,7 @@ const createOutsideClickListener = (cmp: TCMP) => {
 const removeOutsideClickListener = (cmp: TCMP) => {
   if (!onClickOutsideListener.fns[cmp.id]) return;
   if (onClickOutsideListener.count === 1) {
-    window.removeEventListener('click', onClickOutsideListener.mainFn);
+    document.removeEventListener('click', onClickOutsideListener.mainFn);
   }
   delete onClickOutsideListener.fns[cmp.id];
   onClickOutsideListener.count -= 1;

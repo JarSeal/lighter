@@ -17,13 +17,12 @@ export type TTooltip = {
   /* The actual Tooltip content. Default is undefined. */
   tooltip?: string | TProps;
 
-  /* Whether the trigger needs to be clicked or not
-  to show the Tooltip. If false, then a hover and
-  a focus (it will be a button) will open the tooltip.
-  Default is true. */
-  showOnClick?: boolean;
+  /* Whether the tooltip shows on hover or not. If the
+  value is true, then a javascript listener for hover is
+  used. If the value is 'css', then a CSS hover is used
+  (autoAlign will not work). Default is false. */
+  showOnHover?: boolean | 'css';
 
-  // @TODO
   /* How the Tooltip should align with the trigger.
   Default is 'top-center', but if autoAlign is on,
   then the alignment could change whether the
@@ -38,7 +37,9 @@ export type TTooltip = {
 
   // @TODO
   /* Whether to auto align if the Tooltip does not
-  have enough space to show fully. Default is true. */
+  have enough space to show fully and will then change
+  the positioning automatically. This does not work
+  for  Default is true. */
   autoAlign?: boolean;
 
   /* Whether the tooltip is showing after init load.
@@ -68,7 +69,7 @@ export const checkIfElemFullyInView = (elem: HTMLElement) => {
 
 export const Tooltip = (props: TTooltip) => {
   const DEFAULT_WIDTH = '160px';
-  const { id: idProp, tag, trigger, tooltip, showOnClick, align, isShowing, minWidth } = props;
+  const { id: idProp, tag, trigger, tooltip, showOnHover, align, isShowing, minWidth } = props;
   const triggerId = idProp || createNewId();
   const tooltipId = createNewId();
   let tooltipCmp: TCMP | null = null;
@@ -88,9 +89,7 @@ export const Tooltip = (props: TTooltip) => {
   };
 
   const showTooltip = (cmp: TCMP) => {
-    if (tooltipCmp) {
-      tooltipCmp.remove();
-    }
+    if (tooltipCmp || !tooltip) return;
     tooltipCmp = CMP(
       typeof tooltip === 'string'
         ? {
@@ -135,13 +134,24 @@ export const Tooltip = (props: TTooltip) => {
     typeof triggerCmpProps.class === 'string'
       ? [triggerCmpProps.class, 'tooltipTrigger']
       : [...(triggerCmpProps.class ? triggerCmpProps.class : []), 'tooltipTrigger'];
-  if (showOnClick === false) triggerCmpProps.class.push('hoverable');
+  if (showOnHover === 'css') triggerCmpProps.class.push('hoverable');
   const outerCmp = CMP(
     {
-      ...(showOnClick !== false ? { tag: 'button' } : { tag: 'span' }),
+      ...(!showOnHover ? { tag: 'button' } : { tag: 'span' }),
       ...triggerCmpProps,
-      ...(tooltip && showOnClick !== false ? { onClick: (_, cmp) => showTooltip(cmp) } : {}),
-      ...(showOnClick !== false ? { onClickOutside: () => hideTooltip() } : {}),
+      ...(tooltip && !showOnHover ? { onClick: (_, cmp) => showTooltip(cmp) } : {}),
+      ...(!showOnHover
+        ? {
+            onClickOutside: (e) => {
+              const elem = e.target as HTMLElement;
+              if (outerCmp.elem.contains(elem)) return;
+              hideTooltip();
+            },
+          }
+        : {}),
+      ...(showOnHover === true
+        ? { onHover: (_, cmp) => showTooltip(cmp), onHoverOutside: () => hideTooltip() }
+        : {}),
       ...(tag ? { tag } : {}),
       style: { position: 'relative' },
       id: triggerId,
@@ -152,7 +162,7 @@ export const Tooltip = (props: TTooltip) => {
 
   addStylesToHead('tooltip', css);
 
-  if (isShowing || showOnClick === false) {
+  if ((isShowing || showOnHover) && tooltip) {
     setTimeout(() => {
       showTooltip(outerCmp);
     }, 0);
@@ -160,6 +170,10 @@ export const Tooltip = (props: TTooltip) => {
 
   return outerCmp;
 };
+
+// @TODO
+// add userData to CMP (to carry values and functions that can then be used outside the CMP like in events)
+// animate showing (and hiding)
 
 const css = `
 .tooltipTrigger {

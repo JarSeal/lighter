@@ -231,12 +231,12 @@ export const Tooltip = (props: TTooltip) => {
 // @TODO
 // add userData to CMP (to carry values and functions that can then be used outside the CMP like in events)
 // make outerCmp like this:
-// <div class="tooltipWrapper tooltipShowing">
+// <span class="tooltipWrapper tooltipShowing">
 //  <button class="tooltipTrigger">Trigger</button>
 //  <div class="tooltipOuter left top showTooltip">
 //    <div class="tooltipInner">Actual tooltip content</div>
 //  </div>
-// </div>
+// </span>
 
 const css = `
 .tooltipTrigger {

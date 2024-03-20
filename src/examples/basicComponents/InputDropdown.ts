@@ -25,81 +25,80 @@ export type DropdownOption =
   | DropdownBasicOption;
 
 export type TInputDropdown = {
-  /* Id to be used for the "for" attribute
-  in label and for the input element ID. Default is
-  input_[id] that will be created for the input CMP. */
+  /** Id to be used for the "for" attribute
+   * in label and for the input element ID. Default is
+   * input_[id] that will be created for the input CMP. */
   id?: string;
 
-  /* Whether to add the for="id" attribute and the
-  input's id attribute to the elements. Default is false. */
+  /** Whether to add the for="id" attribute and the
+   * input's id attribute to the elements. Default is false. */
   idAttr?: boolean;
 
-  /* Label can either be a string (just text) or
-  sub component props (any component props). 
-  Default is undefined. */
+  /** Label can either be a string (just text) or
+   * sub component props (any component props).
+   * Default is undefined. */
   label?: string | TProps;
 
-  /* Whether the label has a wrapping element
-  or not (defined by an empty string: '').
-  Default is 'span'. */
+  /** Whether the label has a wrapping element
+   * or not (defined by an empty string: '').
+   * Default is 'span'. */
   labelTag?: string;
 
-  /* Input sub component props (usually not needed).
-  Default is undefined. */
+  /** Input sub component props (usually not needed).
+   * Default is undefined. */
   input?: TProps;
 
-  /* Input value string. Default is undefined. */
+  /** Input value string. Default is undefined. */
   value?: string;
 
-  // @TODO
-  /* Options for the dropdown. Must have the
-  label shown in the UI and the value of the
-  selected option. Can also have class and style
-  props. Default is undefined (no options). */
+  /** Options for the dropdown. Must have the
+   * label shown in the UI and the value of the
+   * selected option. Can also have class and style
+   * props. Default is undefined (no options). */
   options?: DropdownOption[];
 
-  /* Whether the input element has a disabled
-  attribute or not. Default is false. */
+  /** Whether the input element has a disabled
+   * attribute or not. Default is false. */
   disabled?: boolean;
 
-  /* The input fields change listener. Default is undefined. */
+  /** The input fields change listener. Default is undefined. */
   onChange?: TListener;
 
-  /* The input field focus listener. Default is undefined. */
+  /** The input field focus listener. Default is undefined. */
   onFocus?: TListener;
 
-  /* The input field blur listener. Default is undefined. */
+  /** The input field blur listener. Default is undefined. */
   onBlur?: TListener;
 
-  /* Input field's listeners. Default is undefined. */
+  /** Input field's listeners. Default is undefined. */
   listeners?: TListenerCreator[];
 
-  /* Whether the input should have focus on create or
-  update. Default is false. */
+  /** Whether the input should have focus on create or
+   * update. Default is false. */
   focus?: boolean;
 
-  /* Whether to lose the focus of the input field
-  on Enter/Esc key press. Default is false. */
+  /** Whether to lose the focus of the input field
+   * on Enter/Esc key press. Default is false. */
   blurOnEnter?: boolean;
   blurOnEsc?: boolean;
 
-  /* Whether to set focus to the next/prev input elem
-  in DOM on Enter key press. It can be given
-  the ID of the next/prev elem. Default is undefined. */
+  /** Whether to set focus to the next/prev input elem
+   * in DOM on Enter key press. It can be given
+   * the ID of the next/prev elem. Default is undefined. */
   focusToNextOnEnter?: string;
   focusToPrevOnShiftEnter?: string;
 
-  /* Runs the validationFn for every change event
-  and on the component initialization. Returns either
-  a message string, CMP props, or null. If not null,
-  an error class is added to the main (label) component
-  and creates the error CMP with the message
-  (with an empty string, only the class is added).
-  Default is undefined. */
+  /** Runs the validationFn for every change event
+   * and on the component initialization. Returns either
+   * a message string, CMP props, or null. If not null,
+   * an error class is added to the main (label) component
+   * and creates the error CMP with the message
+   * (with an empty string, only the class is added).
+   * Default is undefined. */
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
 
-  /* A custom icon (CMP) to show on top of the
-  dropdown "down arrow" icon. Default is undefined. */
+  /** A custom icon (CMP) to show on top of the
+   * dropdown "down arrow" icon. Default is undefined. */
   icon?: TProps;
 };
 

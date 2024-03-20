@@ -1,32 +1,39 @@
 import { addStylesToHead, CMP, createNewId, type TCMP, type TProps } from '../../Lighter/CMP';
 
 export type TTooltip = {
-  /* Id to be used for the "for" attribute
-  in label and for the input element ID. Default is
-  input_[id] that will be created for the input CMP. */
+  /** CMP ID. */
   id?: string;
 
-  /* Tag to overwrite the default tags. Defaults are
-  'button' for clicks and 'span' for hovers. */
-  tag?: string;
-
-  /* The trigger that when hovered (or clicked) will
-  trigger the tooltip. Required prop. */
+  /** The trigger that when hovered (or clicked) will
+   * trigger the tooltip. Required prop. */
   trigger: string | TProps;
 
-  /* The actual Tooltip content. Default is undefined. */
+  /** The actual Tooltip content. Default is undefined. */
   tooltip?: string | TProps;
 
-  /* Whether the tooltip shows on hover or not. If the
-  value is true, then a javascript listener for hover is
-  used. If the value is 'css', then a CSS hover is used
-  (autoAlign will not work). Default is false. */
-  showOnHover?: boolean | 'css';
+  /** Wrapper props */
+  wrapper?: TProps;
 
-  /* How the Tooltip should align with the trigger.
-  Default is 'top-center', but if autoAlign is on,
-  then the alignment could change whether the
-  Tooltip has enough space to show fully or not. */
+  /** Whether the tooltip shows on hover or not. If the
+   * value is true, then a CSS hover is used
+   * (autoAlign will not then work). Default is false. */
+  showOnHover?: boolean;
+
+  /** Whether outside click is disabled or not.
+   * Default is false. */
+  disableOutsideClick?: boolean;
+
+  /** Whether the tooltip has a close button or not.
+   * Possible values are 'left', 'right', and
+   * undefined | null | boolean. This will not be rendered
+   * if the showOnHover is enabled. Default is undefined.
+   */
+  tooltipCloseButton?: 'left' | 'right' | null | boolean;
+
+  /** How the Tooltip should align with the trigger.
+   * Default is 'top-center', but if autoAlign is on,
+   * then the alignment could change whether the
+   * Tooltip has enough space to show fully or not. */
   align?:
     | 'top-right'
     | 'top-center'
@@ -35,17 +42,19 @@ export type TTooltip = {
     | 'bottom-center'
     | 'bottom-left';
 
-  /* Whether to auto align if the Tooltip does not
-  have enough space to show fully and will then change
-  the positioning automatically. This does not work
-  for  Default is true. */
+  /** Whether to auto align if the Tooltip does not
+   * have enough space to show fully and will then change
+   * the positioning automatically. This does not work
+   * for  Default is true. */
   autoAlign?: boolean;
 
-  /* Whether the tooltip is showing after init load.
-  Default is false. */
+  /** Whether the tooltip is showing after init load.
+   * Default is false. */
   isShowing?: boolean;
 
-  /* Tooltip minimum width (CSS value). Default is defined below. */
+  /** Tooltip minimum width (CSS value).
+   * Default can be set with setDefaultTooltipWidth util
+   * (160px). */
   width?: string;
 };
 
@@ -66,36 +75,42 @@ export const checkIfElemFullyInView = (elem: HTMLElement) => {
   };
 };
 
-const DEFAULT_WIDTH = '160px';
+export const setDefaultTooltipWidth = (width: string) => (defaultWidth = width);
+let defaultWidth: null | string = '160px';
+const DEFAULT_BG_COLOR = '#fff';
 const ANIM_SPEED_MS = 170;
 
 export const Tooltip = (props: TTooltip) => {
   const {
     id: idProp,
-    tag,
     trigger,
     tooltip,
+    wrapper,
     showOnHover,
+    disableOutsideClick,
+    tooltipCloseButton,
     align,
     autoAlign,
     isShowing,
     width,
   } = props;
-  const triggerId = idProp || createNewId();
+  const outerCmpId = idProp || createNewId();
+  const triggerId = outerCmpId + '-trigger';
   const tooltipId = createNewId();
   let tooltipCmp: TCMP | null = null;
   let phase: 'hidden' | 'showing' | 'adding' | 'removing' = 'hidden';
+  let tooltipShowing = false;
 
   const tooltipCmpCommonProps: TProps = {
     id: tooltipId,
     idAttr: true,
-    class: 'tooltip',
-    style: { width: width || DEFAULT_WIDTH },
+    style: { width: width || defaultWidth },
   };
 
   const hideTooltip = () => {
     if (!tooltipCmp) return;
     phase = 'removing';
+    tooltipShowing = false;
     tooltipCmp.updateAnim([
       { duration: 100, class: 'hideTooltip', classAction: 'add' },
       {
@@ -112,20 +127,36 @@ export const Tooltip = (props: TTooltip) => {
     outerCmp.updateClass('tooltipShowing', 'remove');
   };
 
-  const showTooltip = (cmp: TCMP) => {
+  const showTooltip = () => {
     if (!tooltip) return;
     phase = 'adding';
+    tooltipShowing = true;
     let tooltipCmpCreated = false;
+    const closeButton =
+      tooltipCloseButton && !showOnHover
+        ? CMP({
+            html: `<button class="tooltipClose ${
+              tooltipCloseButton === 'left' ? 'left' : 'right'
+            }"></button>`,
+            onClick: () => hideTooltip(),
+          })
+        : '';
     if (!tooltipCmp) {
       tooltipCmp = CMP(
         typeof tooltip === 'string'
           ? {
               ...tooltipCmpCommonProps,
-              text: tooltip,
+              html: () =>
+                `<div class="tooltipOuter"><div class="tooltipInner${
+                  tooltipCloseButton ? ' hasCloseButton' : ''
+                }">${closeButton}${tooltip}</div></div>`,
             }
           : {
               ...tooltipCmpCommonProps,
-              ...tooltip,
+              html: () =>
+                `<div class="tooltipOuter"><div class="tooltipInner${
+                  tooltipCloseButton ? ' hasCloseButton' : ''
+                }">${closeButton}${CMP(tooltip)}</div></div>`,
             }
       );
       tooltipCmpCreated = true;
@@ -135,7 +166,7 @@ export const Tooltip = (props: TTooltip) => {
 
     const alignClasses = align ? align.split('-') : ['top', 'center'];
     tooltipCmp.updateClass(alignClasses, 'add');
-    if (tooltipCmpCreated) cmp.add(tooltipCmp);
+    if (tooltipCmpCreated) outerCmp.add(tooltipCmp);
 
     if (autoAlign !== false) {
       const elemVisibility = checkIfElemFullyInView(tooltipCmp.elem);
@@ -181,94 +212,116 @@ export const Tooltip = (props: TTooltip) => {
     typeof triggerCmpProps.class === 'string'
       ? [triggerCmpProps.class, 'tooltipTrigger']
       : [...(triggerCmpProps.class ? triggerCmpProps.class : []), 'tooltipTrigger'];
-  if (showOnHover === 'css') triggerCmpProps.class.push('hoverable');
-  const outerCmp = CMP(
+  const triggerCmp = CMP(
     {
-      ...(!showOnHover ? { tag: 'button' } : { tag: 'span' }),
+      tag: showOnHover ? 'span' : 'button',
       ...triggerCmpProps,
       ...(tooltip && !showOnHover
         ? {
-            onClick: (e, cmp) => {
+            onClick: (e) => {
               const target = e.target as HTMLElement;
-              if (target === outerCmp.elem && (phase === 'showing' || phase === 'adding')) {
+              if (target === triggerCmp.elem && (phase === 'showing' || phase === 'adding')) {
                 return hideTooltip();
               }
-              showTooltip(cmp);
+              showTooltip();
             },
           }
         : {}),
-      ...(!showOnHover
+      ...(!showOnHover && !disableOutsideClick
         ? {
             onClickOutside: (e) => {
               const elem = e.target as HTMLElement;
               if (outerCmp.elem.contains(elem)) return;
-              hideTooltip();
+              if (phase === 'showing') hideTooltip();
             },
           }
         : {}),
-      ...(showOnHover === true
-        ? { onHover: (_, cmp) => showTooltip(cmp), onHoverOutside: () => hideTooltip() }
-        : {}),
-      ...(tag ? { tag } : {}),
-      style: { position: 'relative' },
       id: triggerId,
     },
     Tooltip,
     props
   );
 
+  let outerClasses = [];
+  if (wrapper?.class) {
+    outerClasses = typeof wrapper.class === 'string' ? [wrapper.class] : wrapper.class;
+    if (showOnHover) outerClasses.push('hoverable');
+  } else if (showOnHover) {
+    outerClasses.push('hoverable');
+  }
+  const outerCmp = CMP({
+    ...wrapper,
+    html: () =>
+      `<span class="tooltipWrapper"${showOnHover ? ` tabindex="0"` : ''}>${triggerCmp}</span>`,
+    class: outerClasses,
+    id: outerCmpId,
+  });
+
   addStylesToHead('tooltip', css);
 
-  if ((isShowing || showOnHover === 'css') && tooltip) {
+  if ((isShowing || showOnHover) && tooltip) {
+    tooltipShowing = true;
     setTimeout(() => {
-      showTooltip(outerCmp);
+      showTooltip();
     }, 0);
+  }
+
+  if (!showOnHover) {
+    outerCmp.controls = {
+      showTooltip,
+      hideTooltip,
+      isShowing: tooltipShowing,
+    } as TooltipControls;
   }
 
   return outerCmp;
 };
 
+export type TooltipControls = {
+  showTooltip: () => void;
+  hideTooltip: () => void;
+  isShowing: boolean;
+};
+
 // @TODO
-// add userData to CMP (to carry values and functions that can then be used outside the CMP like in events)
-// make outerCmp like this:
-// <span class="tooltipWrapper tooltipShowing">
-//  <button class="tooltipTrigger">Trigger</button>
-//  <div class="tooltipOuter left top showTooltip">
-//    <div class="tooltipInner">Actual tooltip content</div>
-//  </div>
-// </span>
+// add controls to CMP (to carry values and functions that can then be used outside the CMP like in events)
 
 const css = `
-.tooltipTrigger {
+.tooltipWrapper {
+  position: relative;
   display: inline-block;
 }
-.tooltipTrigger .tooltip,
-.tooltipTrigger.hoverable .tooltip {
+.tooltipWrapper > .tooltipOuter,
+.tooltipWrapper.hoverable > .tooltipOuter {
   position: absolute;
-  background-color: #fff;
   max-width: 100vw;
-  border-radius: 4px;
-  box-shadow: 0 3px 18px rgba(0,0,0,0.2);
-  padding: 8px;
-  border: 1px solid #333;
   overflow: visible;
   opacity: 0;
   pointer-events: none;
   transition: opacity ${ANIM_SPEED_MS}ms ease-out;
+  z-index: 50;
 }
-.tooltipTrigger.hoverable .tooltip {
+.tooltipWrapper.hoverable > .tooltipOuter {
   pointer-events: none;
 }
-.tooltipTrigger.hoverable:hover .tooltip,
-.tooltip.showTooltip,
-.tooltip.hideTooltip {
+.tooltipWrapper.hoverable:hover > .tooltipOuter,
+.tooltipWrapper.hoverable:focus > .tooltipOuter,
+.tooltipOuter.showTooltip,
+.tooltipOuter.hideTooltip {
   opacity: 1;
   pointer-events: all;
 }
-.tooltip.hideTooltip {
+.tooltipOuter.hideTooltip {
   opacity: 0;
 }
-.tooltip:before {
+.tooltipOuter > .tooltipInner {
+  background-color: ${DEFAULT_BG_COLOR};
+  border-radius: 4px;
+  box-shadow: 0 3px 18px rgba(0,0,0,0.2);
+  padding: 8px;
+  border: 1px solid #333;
+}
+.tooltipOuter > .tooltipInner:before {
   display: block;
   content: "";
   background: transparent;
@@ -277,51 +330,117 @@ const css = `
   height: 1px;
   border: 8px solid transparent;
 }
-.tooltip.top {
+.tooltipOuter > .tooltipInner:after {
+  display: block;
+  content: "";
+  background: transparent;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  border: 8px solid transparent;
+}
+.tooltipOuter.top {
   top: auto;
   bottom: 100%;
+}
+.tooltipOuter.top > .tooltipInner {
   margin-bottom: 10px;
 }
-.tooltip.top:before {
+.tooltipOuter.top > .tooltipInner:before {
   top: 100%;
   bottom: auto;
   border-top-color: #333;
+  margin-top: -10px;
 }
-.tooltip.bottom {
+.tooltipOuter.top > .tooltipInner:after {
   top: 100%;
   bottom: auto;
+  border-top-color: ${DEFAULT_BG_COLOR};
+  margin-top: -11px;
+}
+.tooltipOuter.bottom {
+  top: 100%;
+  bottom: auto;
+}
+.tooltipOuter.bottom > .tooltipInner {
   margin-top: 10px;
 }
-.tooltip.bottom:before {
+.tooltipOuter.bottom > .tooltipInner:before {
   top: auto;
   bottom: 100%;
   border-bottom-color: #333;
+  margin-bottom: -10px;
 }
-.tooltip.center {
+.tooltipOuter.bottom > .tooltipInner:after {
+  top: auto;
+  bottom: 100%;
+  border-bottom-color: ${DEFAULT_BG_COLOR};
+  margin-bottom: -11px;
+}
+.tooltipOuter.center {
   left: 50%;
   right: auto;
   transform: translateX(-50%);
 }
-.tooltip.center:before {
+.tooltipOuter.center > .tooltipInner:before,
+.tooltipOuter.center > .tooltipInner:after {
   left: 50%;
   right: auto;
   transform: translateX(-50%);
 }
-.tooltip.left {
+.tooltipOuter.left {
   left: 50%;
   right: auto;
   transform: translateX(-16px);
 }
-.tooltip.left:before {
+.tooltipOuter.left > .tooltipInner:before,
+.tooltipOuter.left > .tooltipInner:after {
   left: 8px;
   right: auto;
 }
-.tooltip.right {
+.tooltipOuter.right {
   left: auto;
   right: 50%;
   transform: translateX(16px);
 }
-.tooltip.right:before {
+.tooltipOuter.right > .tooltipInner:before,
+.tooltipOuter.right > .tooltipInner:after {
   left: auto;
   right: 8px;
+}
+.tooltipOuter > .tooltipInner.hasCloseButton {
+  padding-top: 20px;
+}
+.tooltipClose {
+  width: 16px;
+  height: 16px;
+  border: none;
+  outline: none;
+  background: transparent;
+  border-radius: 0;
+  position: absolute;
+  top: 13px;
+}
+.tooltipClose.right {
+  right: 3px;
+}
+.tooltipClose.left {
+  left: 3px;
+}
+.tooltipClose:before,
+.tooltipClose:after {
+  display: block;
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 1px;
+  height: 12px;
+  background-color: #333;
+}
+.tooltipClose:before {
+  transform: rotate(45deg);
+}
+.tooltipClose:after {
+  transform: rotate(-45deg);
 }`;

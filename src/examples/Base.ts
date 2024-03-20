@@ -3,7 +3,7 @@ import { Button } from './basicComponents/Button';
 import { InputDropdown } from './basicComponents/InputDropdown';
 import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
-import { Tooltip } from './basicComponents/Tooltip';
+import { type TooltipControls, Tooltip } from './basicComponents/Tooltip';
 import { Nav } from './Nav';
 
 export const Base = (props?: TProps) => {
@@ -161,29 +161,38 @@ export const Base = (props?: TProps) => {
     .add(
       Tooltip({
         trigger: 'TooltipCSS',
-        tooltip: 'This is the tooltip text',
-        showOnHover: 'css',
+        tooltip: 'This is the tooltip text but it is a bit of a longer one of a text...',
+        showOnHover: true,
       })
     )
     .updateStyle({ marginRight: '16px' });
 
-  div
-    .add(
-      Tooltip({
-        trigger: 'Tooltip',
-        tooltip: {
-          html: () =>
-            `<div>${Tooltip({
-              trigger: 'Nested tooltip',
-              tooltip: 'This is the tooltip text',
-              showOnHover: false,
-              width: '400px',
-            })}</div>`,
-        },
-        align: 'bottom-right',
-      })
-    )
-    .updateStyle({ marginLeft: '200px' });
+  const tooltipCmp = Tooltip({
+    trigger: 'Tooltip',
+    tooltip: {
+      html: () =>
+        `<div>${Tooltip({
+          trigger: 'Nested tooltip',
+          tooltip: 'This is the tooltip text',
+          showOnHover: false,
+          width: '400px',
+        })}</div>`,
+    },
+    align: 'bottom-right',
+    disableOutsideClick: true,
+    tooltipCloseButton: true,
+  });
+  div.add(tooltipCmp).updateStyle({ marginLeft: '200px' });
+
+  baseCmp.add(
+    Button({
+      onClick: () => {
+        const controls = tooltipCmp.controls as TooltipControls;
+        controls.showTooltip();
+      },
+      text: 'SHOW',
+    })
+  );
 
   baseCmp.add(
     InputDropdown({

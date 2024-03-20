@@ -70,171 +70,171 @@ export const roundToFactor = (
 };
 
 export type TInputNumber = {
-  /* Id to be used for the "for" attribute
-  in label and for the input element ID. Default is
-  input_[id] that will be created for the input CMP. */
+  /** Id to be used for the "for" attribute
+   * in label and for the input element ID. Default is
+   * input_[id] that will be created for the input CMP. */
   id?: string;
 
-  /* Whether to add the for="id" attribute and the
-  input's id attribute to the elements. Default is
-  undefined. */
+  /** Whether to add the for="id" attribute and the
+   * input's id attribute to the elements. Default is
+   * undefined. */
   idAttr?: boolean;
 
-  /* Label can either be a string (just text) or
-  sub component props (any component props).
-  Default is undefined. */
+  /** Label can either be a string (just text) or
+   * sub component props (any component props).
+   * Default is undefined. */
   label?: string | TProps;
 
-  /* Whether the label has a wrapping element
-  or not (defined by an empty string: '').
-  Default is 'span'. */
+  /** Whether the label has a wrapping element
+   * or not (defined by an empty string: '').
+   * Default is 'span'. */
   labelTag?: string;
 
-  /* Input sub component props (usually not needed).
-  Default is undefined. */
+  /** Input sub component props (usually not needed).
+   * Default is undefined. */
   input?: TProps;
 
-  /* Input value. Default is undefined. */
+  /** Input value. Default is undefined. */
   value?: number | null | string;
 
-  /* Unit to show. Default is undefined; */
+  /** Unit to show. Default is undefined; */
   unit?: string | TProps;
 
-  /* Step value for using arrow keys and up/down buttons.
-  Default is 1. */
+  /** Step value for using arrow keys and up/down buttons.
+   * Default is 1. */
   step?: number;
 
-  /* Step value for using arrow keys and up/down buttons
-  with the shift key. Default is undefined. */
+  /** Step value for using arrow keys and up/down buttons
+   * with the shift key. Default is undefined. */
   stepShift?: number;
 
-  /* Round to step value. This means that the number
-  returned will only be a step value number.
-  Requires step to be defined. To work correctly, the minValue
-  and the maxValue should be dividable by the step. Default is false. */
+  /** Round to step value. This means that the number
+   * returned will only be a step value number.
+   * Requires step to be defined. To work correctly, the minValue
+   * and the maxValue should be dividable by the step. Default is false. */
   roundToStep?: boolean;
 
-  /* Rounds the value to the Math.pow(10, roundToFactor).
-  So then a value of 5 with a roundToFactor of 1 would
-  be 10 and 4 would be 0. Default is undefined (no rounding). */
+  /** Rounds the value to the Math.pow(10, roundToFactor).
+   * So then a value of 5 with a roundToFactor of 1 would
+   * be 10 and 4 would be 0. Default is undefined (no rounding). */
   roundToFactor?: number;
 
-  /* Determines what rounding function to use when
-  roundToFactor or roundToStep is used. Default is 'round'. */
+  /** Determines what rounding function to use when
+   * roundToFactor or roundToStep is used. Default is 'round'. */
   roundingFunction?: 'round' | 'floor' | 'ceil';
 
-  /* Precision decimals count (0-100). This is used 
-  to show the full precision value (even if 2.0000)
-  in the input and readOnly, but also rounds values
-  like 3.33333-> to specific precision. Default
-  is undefined. */
+  /** Precision decimals count (0-100). This is used
+   * to show the full precision value (even if 2.0000)
+   * in the input and readOnly, but also rounds values
+   * like 3.33333-> to specific precision. Default
+   * is undefined. */
   precision?: number;
 
-  /* If the float given has more than this number of decimals,
-  then it will be rounded to this correction value. This
-  is to prevent Javascript float problems like
-  0.2 * 0.2 = 0.04000000000000001. This also means that it
-  is the max decimals that a number can have. If set to false,
-  then no correction or rounding is done. Default is
-  the defaultDecimalCorrectionFactor and it can be set with
-  the setDefaultDecimalCorrectionFactor util. */
+  /** If the float given has more than this number of decimals,
+   * then it will be rounded to this correction value. This
+   * is to prevent Javascript float problems like
+   * 0.2 * 0.2 = 0.04000000000000001. This also means that it
+   * is the max decimals that a number can have. If set to false,
+   * then no correction or rounding is done. Default is
+   * the defaultDecimalCorrectionFactor and it can be set with
+   * the setDefaultDecimalCorrectionFactor util. */
   decimalCorrectionFactor?: number | false;
 
-  /* Show read-only value? This value will be shown when
-  the input field does not have focus and then is
-  hidden when the input field has focus. This read-only
-  value can then be formatted according to locale config.
-  Default id false. */
+  /** Show read-only value? This value will be shown when
+   * the input field does not have focus and then is
+   * hidden when the input field has focus. This read-only
+   * value can then be formatted according to locale config.
+   * Default id false. */
   showReadOnlyValue?: boolean;
 
-  /* Locale number representation, meaning that
-  how does a number look with the thousand
-  and decimal separators. Set to false to disable
-  locale parsing. Requires showReadOnlyValue to be
-  true to have effect. Default is
-  the defaultNumberLocale and it can be set with
-  the setDefaultNumberLocale util. */
+  /** Locale number representation, meaning that
+   * how does a number look with the thousand
+   * and decimal separators. Set to false to disable
+   * locale parsing. Requires showReadOnlyValue to be
+   * true to have effect. Default is
+   * the defaultNumberLocale and it can be set with
+   * the setDefaultNumberLocale util. */
   toLocale?: NumberLocaleConfig | false;
 
-  /* Hide input number arrow buttons or not. Default is false. */
+  /** Hide input number arrow buttons or not. Default is false. */
   hideInputArrows?: boolean;
 
-  /* Minimun value for the input field. Must be
-  greater than the possible maxValue. Default is
-  undefined. */
+  /** Minimun value for the input field. Must be
+   * greater than the possible maxValue. Default is
+   * undefined. */
   minValue?: number;
 
-  /* Maximum value for the input field. Must be
-  less than the possible minValue. Default is
-  undefined */
+  /** Maximum value for the input field. Must be
+   * less than the possible minValue. Default is
+   * undefined */
   maxValue?: number;
 
-  /* Whether the field can be empty or not.
-  If false and the minValue is provided,
-  then a null/undefined value will default
-  to minValue, otherwise 0. If it can and it
-  is empty, then a null value is returned.
-  Default is true. */
+  /** Whether the field can be empty or not.
+   * If false and the minValue is provided,
+   * then a null/undefined value will default
+   * to minValue, otherwise 0. If it can and it
+   * is empty, then a null value is returned.
+   * Default is true. */
   canBeEmpty?: boolean;
 
-  /* Placeholder text for empty input field. Default is
-  undefined. */
+  /** Placeholder text for empty input field. Default is
+   * undefined. */
   placeholder?: string;
 
-  /* Whether the input element has a disabled
-  attribute or not. Default is false. */
+  /** Whether the input element has a disabled
+   * attribute or not. Default is false. */
   disabled?: boolean;
 
-  /* The input field change listener. Default
-  is undefined, but the field already uses an
-  onChange listener. */
+  /** The input field change listener. Default
+   * is undefined, but the field already uses an
+   * onChange listener. */
   onChange?: TListener;
 
-  /* The input field input listener. Default
-  is undefined, but the field already uses an
-  onInput listener. */
+  /** The input field input listener. Default
+   * is undefined, but the field already uses an
+   * onInput listener. */
   onInput?: TListener;
 
-  /* The input field focus listener. Default
-  is undefined. */
+  /** The input field focus listener. Default
+   * is undefined. */
   onFocus?: TListener;
 
-  /* The input field blur listener. Default
-  is undefined, but the field already uses an
-  onBlur listener */
+  /** The input field blur listener. Default
+   * is undefined, but the field already uses an
+   * onBlur listener */
   onBlur?: TListener;
 
-  /* Input field's listeners. Default is undefined. */
+  /** Input field's listeners. Default is undefined. */
   listeners?: TListenerCreator[];
 
-  /* Whether the input should have focus on create
-  or update. Default is false. */
+  /** Whether the input should have focus on create
+   * or update. Default is false. */
   focus?: boolean;
 
-  /* Whether to lose the focus of the input field
-  on Enter/Esc key press. Default is false. */
+  /** Whether to lose the focus of the input field
+   * on Enter/Esc key press. Default is false. */
   blurOnEnter?: boolean;
   blurOnEsc?: boolean;
 
-  /* Whether to set focus to the next/prev input elem
-  in DOM on Enter key press. It can be given
-  the ID of the next/prev elem. Default is undefined. */
+  /** Whether to set focus to the next/prev input elem
+   * in DOM on Enter key press. It can be given
+   * the ID of the next/prev elem. Default is undefined. */
   focusToNextOnEnter?: string;
   focusToPrevOnShiftEnter?: string;
 
-  /* Runs the validationFn for every input and change event
-  and on the component initialization. Returns either
-  a message string, CMP props, or null. If not null,
-  an error class is added to the main (label) component
-  and creates the error CMP with the message
-  (with an empty string, only the class is added).
-  Default is undefined. */
+  /** Runs the validationFn for every input and change event
+   * and on the component initialization. Returns either
+   * a message string, CMP props, or null. If not null,
+   * an error class is added to the main (label) component
+   * and creates the error CMP with the message
+   * (with an empty string, only the class is added).
+   * Default is undefined. */
   validationFn?: (value: number | undefined | null | string, cmp: TCMP) => string | TProps | null;
 
-  /* Whether to select all input content on focus or not.
-  Can also be set to 'end' which means that the caret
-  will be placed at the end of the value. Default is
-  undefined. */
+  /** Whether to select all input content on focus or not.
+   * Can also be set to 'end' which means that the caret
+   * will be placed at the end of the value. Default is
+   * undefined. */
   selectTextOnFocus?: boolean | 'start' | 'end';
 };
 

@@ -64,29 +64,98 @@ export type TSettings = {
 };
 
 export type TProps = {
+  /** Lighter settings can only be set when the
+   * root component is defined.
+   */
   settings?: TSettings;
+
+  /** Component ID. If no component is provided
+   * a UUID will be created.
+   */
   id?: string;
+
+  /** Whether the component elem will get an id
+   * attribute or not.
+   */
   idAttr?: boolean;
+
+  /** Root component's attach to element. */
   attach?: HTMLElement;
+
+  /** Element text content. */
   text?: string;
+
+  /** Component element's tag. */
   tag?: string;
+
+  /** Component's html content. The string can
+   * include other components by inserting them
+   * in the string template (back ticks strings).
+   */
   html?: string | ((cmp: TCMP) => string);
+
+  /** Whether to sanitize the html content. A
+   * sanitizer function must be set in the root
+   * component's settings.
+   */
   sanitize?: boolean;
+
+  /** Component element's class or classes.  */
   class?: string | string[];
+
+  /** Component element's attributes. */
   attr?: TAttr;
+
+  /** Component element's inline styles. */
   style?: TStyle;
+
+  /** Timeout animation array. */
   anim?: TAnimChain[];
+
+  /** Component element's 'click' listener function. */
   onClick?: TListener;
+
+  /** Component element's outside click listener function.
+   * One window click listener for all components.
+   */
   onClickOutside?: TListener;
+
+  /** Component element's 'mousemove' listener function. */
   onHover?: TListener;
+
+  /** Component element's 'mouseleave' listener function. */
   onHoverOutside?: TListener;
+
+  /** Component element's 'focus' listener function. */
   onFocus?: TListener;
+
+  /** Component element's 'blur' listener function. */
   onBlur?: TListener;
+
+  /** Component element's 'input' listener function. */
   onInput?: TListener;
+
+  /** Component element's 'change' listener function. */
   onChange?: TListener;
+
+  /** Callback function after the component has been
+   * created / updated.
+   */
   onCreateCmp?: (cmp: TCMP) => void;
+
+  /** Callback function after the component has been removed. */
   onRemoveCmp?: (cmp: TCMP) => void;
+
+  /** Component element's listener creator. Will create
+   * a Javascript event listener with 'type', 'fn' (function),
+   * and 'options'.
+   */
   listeners?: TListenerCreator[];
+
+  /** Whether the element should have focus after render
+   * or not (this can be sometimes challenging, so using
+   * the focus function on the component after render is recommended).
+   */
   focus?: boolean;
 
   // @TODO

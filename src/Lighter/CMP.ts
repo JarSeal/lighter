@@ -121,6 +121,7 @@ export type TCMP = {
   blur: (focusValueToProps?: boolean) => TCMP;
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
   getWrapperProps: <WrapP = undefined>() => WrapP | null;
+  controls: { [key: string]: unknown };
   // @SUGGESTION:
   // updateListener: (TListenerCreator) => TCMP;
   // removeListener: (key: string) => TCMP;
@@ -178,6 +179,7 @@ export const CMP = (
     blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
     scrollIntoView: (params, timeout) => scrollCmpIntoView(cmp, params, timeout),
     getWrapperProps: <WrapP>(): WrapP | null => getWrapper<WrapP>(id)?.wrapperProps || null,
+    controls: {},
   };
 
   // Create possible wrapper

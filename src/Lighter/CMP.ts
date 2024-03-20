@@ -36,20 +36,7 @@ export type TListenerCache = {
 
 export type TClassAction = 'add' | 'remove' | 'replace' | 'toggle';
 
-export type TAnimClass = {
-  class: string | string[];
-  duration: number;
-  gotoIndex?: number;
-  action?: TClassAction;
-};
-
 export type TStyle = { [key: string]: string | number | null };
-
-export type TAnimStyle = {
-  style: TStyle;
-  duration: number;
-  gotoIndex?: number;
-};
 
 export type TAttr = { [key: string]: unknown };
 
@@ -92,6 +79,7 @@ export type TProps = {
   onClick?: TListener;
   onClickOutside?: TListener;
   onHover?: TListener;
+  onHoverOutside?: TListener;
   onFocus?: TListener;
   onBlur?: TListener;
   onInput?: TListener;
@@ -100,6 +88,11 @@ export type TProps = {
   onRemoveCmp?: (cmp: TCMP) => void;
   listeners?: TListenerCreator[];
   focus?: boolean;
+
+  // @TODO
+  // onWindowResize?: TListener; // This is going to be the same as onClickOutside
+  // onMouseover?: TListener;
+  // onMouseout?: TListener; // This is going to be the same as onClickOutside
 };
 
 export type TCMP = {
@@ -128,6 +121,7 @@ export type TCMP = {
   blur: (focusValueToProps?: boolean) => TCMP;
   scrollIntoView: (params?: boolean | ScrollIntoViewOptions, timeout?: number) => TCMP;
   getWrapperProps: <WrapP = undefined>() => WrapP | null;
+  controls: { [key: string]: unknown };
   // @SUGGESTION:
   // updateListener: (TListenerCreator) => TCMP;
   // removeListener: (key: string) => TCMP;
@@ -185,6 +179,7 @@ export const CMP = (
     blur: (focusValueToProps) => blurCmp(cmp, focusValueToProps),
     scrollIntoView: (params, timeout) => scrollCmpIntoView(cmp, params, timeout),
     getWrapperProps: <WrapP>(): WrapP | null => getWrapper<WrapP>(id)?.wrapperProps || null,
+    controls: {},
   };
 
   // Create possible wrapper
@@ -380,6 +375,15 @@ const createListeners = (cmp: TCMP, props?: TProps) => {
   } else {
     if (listeners.mousemove || listeners.mousemove === null) delete listeners.mousemove;
   }
+  if (props?.onHoverOutside) {
+    // Add "mouseleave" listener
+    const onHoverOutside = props.onHoverOutside;
+    const fn = (e: Event) => onHoverOutside(e, cmp);
+    listeners.mouseleave = { fn, type: 'mouseleave' };
+    cmp.elem.addEventListener('mouseleave', fn, true);
+  } else {
+    if (listeners.mouseleave || listeners.mouseleave === null) delete listeners.mouseleave;
+  }
   if (props?.onFocus) {
     // Add "focus" listener
     const onFocus = props.onFocus;
@@ -451,10 +455,17 @@ const removeListeners = (cmp: TCMP, nullify?: boolean) => {
 };
 
 const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
-  // Check children
+  const id = cmp.id;
+
+  // Remove children CMPs
   for (let i = 0; i < cmp.children.length; i++) {
     const child = cmp.children[i];
     child.remove();
+  }
+
+  // Remove reference from parent
+  if (cmp.parent?.children.length) {
+    cmp.parent.children = cmp.parent.children.filter((child) => child.id !== id);
   }
 
   // Remove possible wrapper
@@ -463,7 +474,9 @@ const removeCmp = (cmp: TCMP, doNotRemoveElem?: boolean) => {
   // Remove elem from dom and cmps
   removeListeners(cmp, true);
   removeAnims(cmp);
-  if (!doNotRemoveElem) cmp.elem.remove();
+  if (!doNotRemoveElem) {
+    cmp.elem.remove();
+  }
   delete cmps[cmp.id];
 
   if (cmp.props?.onRemoveCmp) cmp.props.onRemoveCmp(cmp);
@@ -761,6 +774,12 @@ const scrollCmpIntoView = (
   return cmp;
 };
 
+const checkMatchingParent = (elemToCheck: HTMLElement | null, elemTarget: HTMLElement): boolean => {
+  if (!elemToCheck) return false;
+  if (elemToCheck === elemTarget) return true;
+  return checkMatchingParent(elemToCheck.parentElement, elemTarget);
+};
+
 const onClickOutsideListener: {
   count: number;
   fns: { [key: string]: { fn: (e: Event) => void; elem: HTMLElement } };
@@ -778,20 +797,14 @@ const onClickOutsideListener: {
   },
 };
 
-const checkMatchingParent = (elemToCheck: HTMLElement | null, elemTarget: HTMLElement): boolean => {
-  if (!elemToCheck) return false;
-  if (elemToCheck === elemTarget) return true;
-  return checkMatchingParent(elemToCheck.parentElement, elemTarget);
-};
-
 const createOutsideClickListener = (cmp: TCMP) => {
   if (!cmp.props?.onClickOutside) {
     removeOutsideClickListener(cmp);
     return;
   }
   if (onClickOutsideListener.count === 0) {
-    window.removeEventListener('click', onClickOutsideListener.mainFn);
-    window.addEventListener('click', onClickOutsideListener.mainFn);
+    document.removeEventListener('click', onClickOutsideListener.mainFn);
+    document.addEventListener('click', onClickOutsideListener.mainFn);
   }
   const onClickOutside = cmp.props.onClickOutside;
   onClickOutsideListener.fns[cmp.id] = { fn: (e: Event) => onClickOutside(e, cmp), elem: cmp.elem };
@@ -801,7 +814,7 @@ const createOutsideClickListener = (cmp: TCMP) => {
 const removeOutsideClickListener = (cmp: TCMP) => {
   if (!onClickOutsideListener.fns[cmp.id]) return;
   if (onClickOutsideListener.count === 1) {
-    window.removeEventListener('click', onClickOutsideListener.mainFn);
+    document.removeEventListener('click', onClickOutsideListener.mainFn);
   }
   delete onClickOutsideListener.fns[cmp.id];
   onClickOutsideListener.count -= 1;
@@ -847,4 +860,21 @@ const replaceCmpWithAnother = (oldCmp: TCMP, newCmp: TCMP) => {
 
   // Set the replaced cmp back to cache
   cmps[id] = oldCmp;
+};
+
+const stylesInHead: { [key: string]: boolean } = {};
+export const addStylesToHead = (id: string, css: string) => {
+  if (stylesInHead[id]) return;
+
+  const titleElem = document.querySelector('head title');
+  const styleElem = document.createElement('style');
+  styleElem.textContent = css;
+  if (titleElem) {
+    titleElem.insertAdjacentElement('afterend', styleElem);
+  } else {
+    const headElem = document.querySelector('head');
+    if (headElem) headElem.appendChild(styleElem);
+  }
+
+  stylesInHead[id] = true;
 };

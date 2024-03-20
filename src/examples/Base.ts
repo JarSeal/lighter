@@ -143,24 +143,47 @@ export const Base = (props?: TProps) => {
     })
   );
 
-  const div = CMP();
+  const div = CMP({ style: { margin: '16px 0' } });
   baseCmp.add(div);
   div
     .add(
       Tooltip({
         trigger: 'Tooltip',
         tooltip: 'This is the tooltip text',
-        isShowing: true,
+        // isShowing: true,
+        // autoAlign: false,
         showOnHover: true,
       })
     )
-    .updateStyle({ margin: '16px 0' });
+    .updateStyle({ marginRight: '16px' });
 
-  baseCmp
+  div
     .add(
-      Tooltip({ trigger: 'Tooltip', tooltip: 'This is the tooltip text', align: 'bottom-right' })
+      Tooltip({
+        trigger: 'TooltipCSS',
+        tooltip: 'This is the tooltip text',
+        showOnHover: 'css',
+      })
     )
-    .updateStyle({ margin: '16px 0 16px 200px' });
+    .updateStyle({ marginRight: '16px' });
+
+  div
+    .add(
+      Tooltip({
+        trigger: 'Tooltip',
+        tooltip: {
+          html: () =>
+            `<div>${Tooltip({
+              trigger: 'Nested tooltip',
+              tooltip: 'This is the tooltip text',
+              showOnHover: false,
+              width: '400px',
+            })}</div>`,
+        },
+        align: 'bottom-right',
+      })
+    )
+    .updateStyle({ marginLeft: '200px' });
 
   baseCmp.add(
     InputDropdown({

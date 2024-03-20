@@ -1,4 +1,4 @@
-import { addStylesToHead, CMP, createNewId, TCMP, type TProps } from '../../Lighter/CMP';
+import { addStylesToHead, CMP, createNewId, type TCMP, type TProps } from '../../Lighter/CMP';
 
 export type TTooltip = {
   /* Id to be used for the "for" attribute
@@ -35,7 +35,6 @@ export type TTooltip = {
     | 'bottom-center'
     | 'bottom-left';
 
-  // @TODO
   /* Whether to auto align if the Tooltip does not
   have enough space to show fully and will then change
   the positioning automatically. This does not work
@@ -47,7 +46,7 @@ export type TTooltip = {
   isShowing?: boolean;
 
   /* Tooltip minimum width (CSS value). Default is defined below. */
-  minWidth?: string;
+  width?: string;
 };
 
 export const checkIfElemFullyInView = (elem: HTMLElement) => {
@@ -67,61 +66,109 @@ export const checkIfElemFullyInView = (elem: HTMLElement) => {
   };
 };
 
+const DEFAULT_WIDTH = '160px';
+const ANIM_SPEED_MS = 170;
+
 export const Tooltip = (props: TTooltip) => {
-  const DEFAULT_WIDTH = '160px';
-  const { id: idProp, tag, trigger, tooltip, showOnHover, align, isShowing, minWidth } = props;
+  const {
+    id: idProp,
+    tag,
+    trigger,
+    tooltip,
+    showOnHover,
+    align,
+    autoAlign,
+    isShowing,
+    width,
+  } = props;
   const triggerId = idProp || createNewId();
   const tooltipId = createNewId();
   let tooltipCmp: TCMP | null = null;
+  let phase: 'hidden' | 'showing' | 'adding' | 'removing' = 'hidden';
 
-  const tooltipCmpCommonProps = {
+  const tooltipCmpCommonProps: TProps = {
     id: tooltipId,
     idAttr: true,
     class: 'tooltip',
-    style: { minWidth: minWidth || DEFAULT_WIDTH },
+    style: { width: width || DEFAULT_WIDTH },
   };
 
   const hideTooltip = () => {
-    if (tooltipCmp) {
-      tooltipCmp.remove();
-      tooltipCmp = null;
-    }
+    if (!tooltipCmp) return;
+    phase = 'removing';
+    tooltipCmp.updateAnim([
+      { duration: 100, class: 'hideTooltip', classAction: 'add' },
+      {
+        duration: ANIM_SPEED_MS,
+        class: 'showTooltip',
+        classAction: 'remove',
+        phaseEndFn: (cmp) => {
+          cmp.remove();
+          tooltipCmp = null;
+          phase = 'hidden';
+        },
+      },
+    ]);
+    outerCmp.updateClass('tooltipShowing', 'remove');
   };
 
   const showTooltip = (cmp: TCMP) => {
-    if (tooltipCmp || !tooltip) return;
-    tooltipCmp = CMP(
-      typeof tooltip === 'string'
-        ? {
-            ...tooltipCmpCommonProps,
-            text: tooltip,
-          }
-        : {
-            ...tooltipCmpCommonProps,
-            ...tooltip,
-          }
-    );
+    if (!tooltip) return;
+    phase = 'adding';
+    let tooltipCmpCreated = false;
+    if (!tooltipCmp) {
+      tooltipCmp = CMP(
+        typeof tooltip === 'string'
+          ? {
+              ...tooltipCmpCommonProps,
+              text: tooltip,
+            }
+          : {
+              ...tooltipCmpCommonProps,
+              ...tooltip,
+            }
+      );
+      tooltipCmpCreated = true;
+    } else {
+      tooltipCmp.updateClass(['left', 'right', 'center', 'top', 'bottom', 'hideTooltip'], 'remove');
+    }
+
     const alignClasses = align ? align.split('-') : ['top', 'center'];
     tooltipCmp.updateClass(alignClasses, 'add');
-    cmp.add(tooltipCmp);
-    const elemVisibility = checkIfElemFullyInView(tooltipCmp.elem);
-    if (!elemVisibility.isFullyInView) {
-      if (!elemVisibility.isLeftInView) {
-        tooltipCmp.updateClass(alignClasses[1], 'remove');
-        alignClasses[1] = 'left';
-      } else if (!elemVisibility.isRightInView) {
-        tooltipCmp.updateClass(alignClasses[1], 'remove');
-        alignClasses[1] = 'right';
+    if (tooltipCmpCreated) cmp.add(tooltipCmp);
+
+    if (autoAlign !== false) {
+      const elemVisibility = checkIfElemFullyInView(tooltipCmp.elem);
+      if (!elemVisibility.isFullyInView) {
+        if (!elemVisibility.isLeftInView) {
+          tooltipCmp.updateClass(['right', 'center'], 'remove');
+          alignClasses[1] = 'left';
+        } else if (!elemVisibility.isRightInView) {
+          tooltipCmp.updateClass(['left', 'center'], 'remove');
+          alignClasses[1] = 'right';
+        }
+        if (!elemVisibility.isTopInView) {
+          tooltipCmp.updateClass('top', 'remove');
+          alignClasses[0] = 'bottom';
+        } else if (!elemVisibility.isBottomInView) {
+          tooltipCmp.updateClass('bottom', 'remove');
+          alignClasses[0] = 'top';
+        }
+        tooltipCmp.updateClass(alignClasses, 'add');
       }
-      if (!elemVisibility.isTopInView) {
-        tooltipCmp.updateClass(alignClasses[0], 'remove');
-        alignClasses[0] = 'bottom';
-      } else if (!elemVisibility.isBottomInView) {
-        tooltipCmp.updateClass(alignClasses[0], 'remove');
-        alignClasses[0] = 'top';
-      }
-      tooltipCmp.updateClass(alignClasses, 'add');
     }
+
+    tooltipCmp.updateAnim([
+      {
+        duration: ANIM_SPEED_MS,
+        class: 'showTooltip',
+        classAction: 'add',
+        phaseEndFn: () => {
+          phase = 'showing';
+        },
+      },
+    ]);
+    outerCmp.updateClass('tooltipShowing', 'add');
   };
 
   const triggerCmpProps =
@@ -139,7 +186,17 @@ export const Tooltip = (props: TTooltip) => {
     {
       ...(!showOnHover ? { tag: 'button' } : { tag: 'span' }),
       ...triggerCmpProps,
-      ...(tooltip && !showOnHover ? { onClick: (_, cmp) => showTooltip(cmp) } : {}),
+      ...(tooltip && !showOnHover
+        ? {
+            onClick: (e, cmp) => {
+              const target = e.target as HTMLElement;
+              if (target === outerCmp.elem && (phase === 'showing' || phase === 'adding')) {
+                return hideTooltip();
+              }
+              showTooltip(cmp);
+            },
+          }
+        : {}),
       ...(!showOnHover
         ? {
             onClickOutside: (e) => {
@@ -162,7 +219,7 @@ export const Tooltip = (props: TTooltip) => {
 
   addStylesToHead('tooltip', css);
 
-  if ((isShowing || showOnHover) && tooltip) {
+  if ((isShowing || showOnHover === 'css') && tooltip) {
     setTimeout(() => {
       showTooltip(outerCmp);
     }, 0);
@@ -173,35 +230,43 @@ export const Tooltip = (props: TTooltip) => {
 
 // @TODO
 // add userData to CMP (to carry values and functions that can then be used outside the CMP like in events)
-// animate showing (and hiding)
+// make outerCmp like this:
+// <div class="tooltipWrapper tooltipShowing">
+//  <button class="tooltipTrigger">Trigger</button>
+//  <div class="tooltipOuter left top showTooltip">
+//    <div class="tooltipInner">Actual tooltip content</div>
+//  </div>
+// </div>
 
 const css = `
 .tooltipTrigger {
   display: inline-block;
 }
+.tooltipTrigger .tooltip,
 .tooltipTrigger.hoverable .tooltip {
-  height: 0;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
-  opacity: 0;
-}
-.tooltipTrigger.hoverable:hover .tooltip {
-  height: auto;
-  padding: 8px;
-  border: 1px solid #333;
-  overflow: visible;
-  opacity: 1;
-  transition: opacity 0.17s ease-out;
-}
-.tooltip {
   position: absolute;
   background-color: #fff;
-  border-radius: 4px;
   max-width: 100vw;
+  border-radius: 4px;
   box-shadow: 0 3px 18px rgba(0,0,0,0.2);
   padding: 8px;
   border: 1px solid #333;
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity ${ANIM_SPEED_MS}ms ease-out;
+}
+.tooltipTrigger.hoverable .tooltip {
+  pointer-events: none;
+}
+.tooltipTrigger.hoverable:hover .tooltip,
+.tooltip.showTooltip,
+.tooltip.hideTooltip {
+  opacity: 1;
+  pointer-events: all;
+}
+.tooltip.hideTooltip {
+  opacity: 0;
 }
 .tooltip:before {
   display: block;

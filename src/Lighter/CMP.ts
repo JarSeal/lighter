@@ -154,16 +154,19 @@ export type TProps = {
 
   /** Whether the element should have focus after render
    * or not (this can be sometimes challenging, so using
-   * the focus function on the component after render is recommended).
+   * the focus function on the component after render is
+   * recommended).
    */
   focus?: boolean;
 
   // @TODO
+  /** Component's on resize listener. One window resize
+   * listener for all components.
+   */
   // onWindowResize?: TListener; // This is going to be the same as onClickOutside
-  // onMouseover?: TListener;
-  // onMouseout?: TListener; // This is going to be the same as onClickOutside
 };
 
+// @TODO: add jsDoc comments
 export type TCMP = {
   id: string;
   children: TCMP[];

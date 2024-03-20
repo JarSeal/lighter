@@ -179,6 +179,8 @@ export const Base = (props?: TProps) => {
         })}</div>`,
     },
     align: 'bottom-right',
+    disableOutsideClick: true,
+    tooltipCloseButton: true,
   });
   div.add(tooltipCmp).updateStyle({ marginLeft: '200px' });
 

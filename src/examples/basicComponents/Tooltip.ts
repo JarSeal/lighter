@@ -1,34 +1,39 @@
 import { addStylesToHead, CMP, createNewId, type TCMP, type TProps } from '../../Lighter/CMP';
 
 export type TTooltip = {
-  /* Id to be used for the "for" attribute
-  in label and for the input element ID. Default is
-  input_[id] that will be created for the input CMP. */
+  /** CMP ID. */
   id?: string;
 
-  /* Tag to overwrite the default tags. Defaults are
-  'button' for clicks and 'span' for hovers. */
-  tag?: string;
-
-  /* The trigger that when hovered (or clicked) will
-  trigger the tooltip. Required prop. */
+  /** The trigger that when hovered (or clicked) will
+   * trigger the tooltip. Required prop. */
   trigger: string | TProps;
 
-  /* The actual Tooltip content. Default is undefined. */
+  /** The actual Tooltip content. Default is undefined. */
   tooltip?: string | TProps;
 
-  /* Wrapper props */
+  /** Wrapper props */
   wrapper?: TProps;
 
-  /* Whether the tooltip shows on hover or not. If the
-  value is true, then a CSS hover is used
-  (autoAlign will not work). Default is false. */
+  /** Whether the tooltip shows on hover or not. If the
+   * value is true, then a CSS hover is used
+   * (autoAlign will not then work). Default is false. */
   showOnHover?: boolean;
 
-  /* How the Tooltip should align with the trigger.
-  Default is 'top-center', but if autoAlign is on,
-  then the alignment could change whether the
-  Tooltip has enough space to show fully or not. */
+  /** Whether outside click is disabled or not.
+   * Default is false. */
+  disableOutsideClick?: boolean;
+
+  /** Whether the tooltip has a close button or not.
+   * Possible values are 'left', 'right', and
+   * undefined | null | boolean. This will not be rendered
+   * if the showOnHover is enabled. Default is undefined.
+   */
+  tooltipCloseButton?: 'left' | 'right' | null | boolean;
+
+  /** How the Tooltip should align with the trigger.
+   * Default is 'top-center', but if autoAlign is on,
+   * then the alignment could change whether the
+   * Tooltip has enough space to show fully or not. */
   align?:
     | 'top-right'
     | 'top-center'
@@ -37,17 +42,19 @@ export type TTooltip = {
     | 'bottom-center'
     | 'bottom-left';
 
-  /* Whether to auto align if the Tooltip does not
-  have enough space to show fully and will then change
-  the positioning automatically. This does not work
-  for  Default is true. */
+  /** Whether to auto align if the Tooltip does not
+   * have enough space to show fully and will then change
+   * the positioning automatically. This does not work
+   * for  Default is true. */
   autoAlign?: boolean;
 
-  /* Whether the tooltip is showing after init load.
-  Default is false. */
+  /** Whether the tooltip is showing after init load.
+   * Default is false. */
   isShowing?: boolean;
 
-  /* Tooltip minimum width (CSS value). Default is defined below. */
+  /** Tooltip minimum width (CSS value).
+   * Default can be set with setDefaultTooltipWidth util
+   * (160px). */
   width?: string;
 };
 
@@ -68,18 +75,20 @@ export const checkIfElemFullyInView = (elem: HTMLElement) => {
   };
 };
 
-const DEFAULT_WIDTH = '160px';
+export const setDefaultTooltipWidth = (width: string) => (defaultWidth = width);
+let defaultWidth: null | string = '160px';
 const DEFAULT_BG_COLOR = '#fff';
 const ANIM_SPEED_MS = 170;
 
 export const Tooltip = (props: TTooltip) => {
   const {
     id: idProp,
-    tag,
     trigger,
     tooltip,
     wrapper,
     showOnHover,
+    disableOutsideClick,
+    tooltipCloseButton,
     align,
     autoAlign,
     isShowing,
@@ -90,16 +99,18 @@ export const Tooltip = (props: TTooltip) => {
   const tooltipId = createNewId();
   let tooltipCmp: TCMP | null = null;
   let phase: 'hidden' | 'showing' | 'adding' | 'removing' = 'hidden';
+  let tooltipShowing = false;
 
   const tooltipCmpCommonProps: TProps = {
     id: tooltipId,
     idAttr: true,
-    style: { width: width || DEFAULT_WIDTH },
+    style: { width: width || defaultWidth },
   };
 
   const hideTooltip = () => {
     if (!tooltipCmp) return;
     phase = 'removing';
+    tooltipShowing = false;
     tooltipCmp.updateAnim([
       { duration: 100, class: 'hideTooltip', classAction: 'add' },
       {
@@ -119,19 +130,33 @@ export const Tooltip = (props: TTooltip) => {
   const showTooltip = () => {
     if (!tooltip) return;
     phase = 'adding';
+    tooltipShowing = true;
     let tooltipCmpCreated = false;
+    const closeButton =
+      tooltipCloseButton && !showOnHover
+        ? CMP({
+            html: `<button class="tooltipClose ${
+              tooltipCloseButton === 'left' ? 'left' : 'right'
+            }"></button>`,
+            onClick: () => hideTooltip(),
+          })
+        : '';
     if (!tooltipCmp) {
       tooltipCmp = CMP(
         typeof tooltip === 'string'
           ? {
               ...tooltipCmpCommonProps,
               html: () =>
-                `<div class="tooltipOuter"><div class="tooltipInner">${tooltip}</div></div>`,
+                `<div class="tooltipOuter"><div class="tooltipInner${
+                  tooltipCloseButton ? ' hasCloseButton' : ''
+                }">${closeButton}${tooltip}</div></div>`,
             }
           : {
               ...tooltipCmpCommonProps,
               html: () =>
-                `<div class="tooltipOuter"><div class="tooltipInner">${CMP(tooltip)}</div></div>`,
+                `<div class="tooltipOuter"><div class="tooltipInner${
+                  tooltipCloseButton ? ' hasCloseButton' : ''
+                }">${closeButton}${CMP(tooltip)}</div></div>`,
             }
       );
       tooltipCmpCreated = true;
@@ -202,7 +227,7 @@ export const Tooltip = (props: TTooltip) => {
             },
           }
         : {}),
-      ...(!showOnHover
+      ...(!showOnHover && !disableOutsideClick
         ? {
             onClickOutside: (e) => {
               const elem = e.target as HTMLElement;
@@ -211,7 +236,6 @@ export const Tooltip = (props: TTooltip) => {
             },
           }
         : {}),
-      ...(tag ? { tag } : {}),
       id: triggerId,
     },
     Tooltip,
@@ -236,6 +260,7 @@ export const Tooltip = (props: TTooltip) => {
   addStylesToHead('tooltip', css);
 
   if ((isShowing || showOnHover) && tooltip) {
+    tooltipShowing = true;
     setTimeout(() => {
       showTooltip();
     }, 0);
@@ -245,7 +270,8 @@ export const Tooltip = (props: TTooltip) => {
     outerCmp.controls = {
       showTooltip,
       hideTooltip,
-    };
+      isShowing: tooltipShowing,
+    } as TooltipControls;
   }
 
   return outerCmp;
@@ -254,6 +280,7 @@ export const Tooltip = (props: TTooltip) => {
 export type TooltipControls = {
   showTooltip: () => void;
   hideTooltip: () => void;
+  isShowing: boolean;
 };
 
 // @TODO
@@ -380,4 +407,40 @@ const css = `
 .tooltipOuter.right > .tooltipInner:after {
   left: auto;
   right: 8px;
+}
+.tooltipOuter > .tooltipInner.hasCloseButton {
+  padding-top: 20px;
+}
+.tooltipClose {
+  width: 16px;
+  height: 16px;
+  border: none;
+  outline: none;
+  background: transparent;
+  border-radius: 0;
+  position: absolute;
+  top: 13px;
+}
+.tooltipClose.right {
+  right: 3px;
+}
+.tooltipClose.left {
+  left: 3px;
+}
+.tooltipClose:before,
+.tooltipClose:after {
+  display: block;
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 1px;
+  height: 12px;
+  background-color: #333;
+}
+.tooltipClose:before {
+  transform: rotate(45deg);
+}
+.tooltipClose:after {
+  transform: rotate(-45deg);
 }`;

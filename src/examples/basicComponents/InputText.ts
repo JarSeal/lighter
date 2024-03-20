@@ -9,111 +9,110 @@ import {
 } from '../../Lighter/CMP';
 
 export type TInputText = {
-  /* Id to be used for the "for" attribute
-  in label and for the input element ID. Default is
-  input_[id] that will be created for the input CMP. */
+  /** Id to be used for the "for" attribute
+   * in label and for the input element ID. Default is
+   * input_[id] that will be created for the input CMP. */
   id?: string;
 
-  /* Whether to add the for="id" attribute and the
-  input's id attribute to the elements. Default is false. */
+  /** Whether to add the for="id" attribute and the
+   * input's id attribute to the elements. Default is false. */
   idAttr?: boolean;
 
-  /* Whether the type of the input attribute is
-  "password" or "text". Default is 'text'. */
+  /** Whether the type of the input attribute is
+   * "password" or "text". Default is 'text'. */
   isPassword?: boolean;
 
-  /* Label can either be a string (just text) or
-  sub component props (any component props). 
-  Default is undefined. */
+  /** Label can either be a string (just text) or
+   * sub component props (any component props).
+   * Default is undefined. */
   label?: string | TProps;
 
-  /* Whether the label has a wrapping element
-  or not (defined by an empty string: '').
-  Default is 'span'. */
+  /** Whether the label has a wrapping element
+   * or not (defined by an empty string: '').
+   * Default is 'span'. */
   labelTag?: string;
 
-  /* Input/textarea sub component props (usually not needed).
-  Default is undefined. */
+  /** Input/textarea sub component props (usually not needed).
+   * Default is undefined. */
   input?: TProps;
 
-  /* Input value string. Default is an empty string. */
+  /** Input value string. Default is an empty string. */
   value: string;
 
-  /* Placeholder text for empty input field. Default
-  is undefined. */
+  /** Placeholder text for empty input field. Default
+   * is undefined. */
   placeholder?: string;
 
-  /* Whether the input element has a disabled
-  attribute or not. Default is false. */
+  /** Whether the input element has a disabled
+   * attribute or not. Default is false. */
   disabled?: boolean;
 
-  /* The input fields change listener. Default is undefined. */
+  /** The input fields change listener. Default is undefined. */
   onChange?: TListener;
 
-  /* The input fields input listener. Default is undefined. */
+  /** The input fields input listener. Default is undefined. */
   onInput?: TListener;
 
-  /* The input field focus listener. Default is undefined. */
+  /** The input field focus listener. Default is undefined. */
   onFocus?: TListener;
 
-  /* The input field blur listener. Default is undefined. */
+  /** The input field blur listener. Default is undefined. */
   onBlur?: TListener;
 
-  /* Input field's listeners. Default is undefined. */
+  /** Input field's listeners. Default is undefined. */
   listeners?: TListenerCreator[];
 
-  /* Whether the input should have focus on create or
-  update. Default is false. */
+  /** Whether the input should have focus on create or
+   * update. Default is false. */
   focus?: boolean;
 
-  /* Maximum length forced by the component. Default
-  is undefined. */
+  /** Maximum length forced by the component. Default
+   * is undefined. */
   maxLength?: number;
 
-  /* Whether to lose the focus of the input field
-  on Enter/Esc key press. Default is false. */
+  /** Whether to lose the focus of the input field
+   * on Enter/Esc key press. Default is false. */
   blurOnEnter?: boolean;
   blurOnEsc?: boolean;
 
-  /* Whether to set focus to the next/prev input elem
-  in DOM on Enter key press. It can be given
-  the ID of the next/prev elem. Default is undefined. */
+  /** Whether to set focus to the next/prev input elem
+   * in DOM on Enter key press. It can be given
+   * the ID of the next/prev elem. Default is undefined. */
   focusToNextOnEnter?: string;
   focusToPrevOnShiftEnter?: string;
 
-  /* Runs the validationFn for every input and change event
-  and on the component initialization. Returns either
-  a message string, CMP props, or null. If not null,
-  an error class is added to the main (label) component
-  and creates the error CMP with the message
-  (with an empty string, only the class is added).
-  Default is undefined. */
+  /** Runs the validationFn for every input and change event
+   * and on the component initialization. Returns either
+   * a message string, CMP props, or null. If not null,
+   * an error class is added to the main (label) component
+   * and creates the error CMP with the message
+   * (with an empty string, only the class is added).
+   * Default is undefined. */
   validationFn?: (value: string | undefined, cmp: TCMP) => string | TProps | null;
 
-  /* Whether to select all input content on focus or not.
-  Can also be set to 'end' which means that the caret
-  will be placed at the end of the value. Default is
-  undefined. */
+  /** Whether to select all input content on focus or not.
+   * Can also be set to 'end' which means that the caret
+   * will be placed at the end of the value. Default is
+   * undefined. */
   selectTextOnFocus?: boolean | 'start' | 'end';
 
-  /* Whether the input field is multiline or not. For
-  single line an input tag type of 'text' or 'password'
-  is used and for multiline a textarea tag is used.
-  Default is false. */
+  /** Whether the input field is multiline or not. For
+   * single line an input tag type of 'text' or 'password'
+   * is used and for multiline a textarea tag is used.
+   * Default is false. */
   multiline?: boolean;
 
-  /* Defines the character counter's maximum character
-  count. When set, will show the actual character
-  count CMP in relation to the max value (24 / 130).
-  Default is undefined (no character counter). */
+  /** Defines the character counter's maximum character
+   * count. When set, will show the actual character
+   * count CMP in relation to the max value (eg. 24 / 130).
+   * Default is undefined (no character counter). */
   charCountMax?: number;
 
-  // @TODO
-  /* Regex pattern for the input field. For example,
-  the regex could force only numbers to this field. This
-  determines what characters are typed to the field.
-  Default is undefined. */
-  regex?: string;
+  /** Regex pattern for the input field. For example,
+   * the regex could force only numbers to this field. Regex
+   * can be entered either as RegExp type or as a string which
+   * will always get the global flag. Default is undefined. */
+  forceRegex?: RegExp | string;
 };
 
 type TInputAttr = {
@@ -126,6 +125,13 @@ type TInputAttr = {
 
 export const InputText = (props: TInputText) => {
   const inputId = `input_${createNewId()}`;
+
+  if (props.forceRegex) {
+    props.value = props.value.replace(
+      typeof props.forceRegex === 'string' ? new RegExp(props.forceRegex, 'g') : props.forceRegex,
+      ''
+    );
+  }
 
   // Label
   const LABEL_CLASS = 'inputLabel';
@@ -274,12 +280,19 @@ export const InputText = (props: TInputText) => {
             }
           : {}),
         onInput: (e) => {
-          const value = (e.target as HTMLInputElement).value;
+          const target = e.target as HTMLInputElement;
+          let value = target.value;
+          if (props.forceRegex) {
+            target.value = target.value.replace(
+              typeof props.forceRegex === 'string'
+                ? new RegExp(props.forceRegex, 'g')
+                : props.forceRegex,
+              ''
+            );
+            value = target.value;
+          }
           validate(value);
           props?.onInput && props.onInput(e, inputTextCmp);
-          // if (inputTextCmp.props?.wrapperProps) {
-          //   inputTextCmp.props.wrapperProps.value = value;
-          // }
           if (props) props.value = value;
           counterCmp &&
             counterCmp.update({ text: `${props?.value?.length || 0} / ${props?.charCountMax}` });

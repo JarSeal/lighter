@@ -95,6 +95,7 @@ export const Base = (props?: TProps) => {
       selectTextOnFocus: 'start',
       multiline: true,
       charCountMax: 10,
+      // forceRegex: /\D/g,
     })
   );
 

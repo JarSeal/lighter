@@ -1,5 +1,6 @@
 import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
+import { CollapsableSection } from './basicComponents/CollapsableSection';
 import { InputDropdown } from './basicComponents/InputDropdown';
 import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
@@ -223,6 +224,15 @@ export const Base = (props?: TProps) => {
         return null;
       },
       // icon: { text: 'A', style: { background: 'blue' } },
+    })
+  );
+
+  // CollapsableSection
+  baseCmp.add(
+    CollapsableSection({
+      title: 'My Section',
+      content: 'My Content',
+      // icon: { html: '<span>ICN</span>' },
     })
   );
 

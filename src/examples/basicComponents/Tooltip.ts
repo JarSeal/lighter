@@ -9,7 +9,7 @@ export type TTooltip = {
   trigger: string | TProps;
 
   /** The actual Tooltip content. Default is undefined. */
-  tooltip?: string | TProps;
+  tooltip?: string | TProps | TCMP;
 
   /** Wrapper props */
   wrapper?: TProps;
@@ -156,7 +156,9 @@ export const Tooltip = (props: TTooltip) => {
               html: () =>
                 `<div class="tooltipOuter"><div class="tooltipInner${
                   tooltipCloseButton ? ' hasCloseButton' : ''
-                }">${closeButton}${CMP(tooltip)}</div></div>`,
+                }">${closeButton}${
+                  tooltip && 'isCmp' in tooltip ? tooltip : CMP(tooltip)
+                }</div></div>`,
             }
       );
       tooltipCmpCreated = true;

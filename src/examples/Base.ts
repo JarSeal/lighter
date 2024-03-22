@@ -231,10 +231,14 @@ export const Base = (props?: TProps) => {
   baseCmp.add(
     CollapsableSection({
       title: 'My Section',
-      content: 'My Content',
+      content: {
+        html: () => `${Nav()}`,
+        style: { padding: '16px' },
+      },
+      animSpeed: 1000,
       // onlyIconClick: true,
       // isClosed: true,
-      // keepContentWhenHidden: true,
+      // keepContentWhenClosed: true,
       // icon: { html: '<span>ICN</span>' },
     })
   );

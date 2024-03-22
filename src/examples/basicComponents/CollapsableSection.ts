@@ -39,10 +39,15 @@ export type TCollapsableSection = {
    * when the Section is closed. Default is
    * false (content is removed when closed).
    */
-  keepContentWhenHidden?: boolean;
+  keepContentWhenClosed?: boolean;
 
   /** Collapsable section classes */
   class?: string | string[];
+
+  /** Opening and closing animation speed in
+   * milliseconds. Default is 230ms.
+   */
+  animSpeed?: number;
 };
 
 export type TCollapsableSectionControls = {
@@ -50,39 +55,125 @@ export type TCollapsableSectionControls = {
   openSection: () => void;
 };
 
-export const CollapsableSection = (props: TCollapsableSection) => {
-  const SECTION_OPEN_CLASS = 'csIsOpen';
-  const { id, content, title, icon, onlyIconClick, isClosed, keepContentWhenHidden } = props;
+const DEFAULT_ANIM_SPEED_MS = 230;
+const SECTION_MAIN_CLASS = 'collapsableSection';
+const SECTION_OPEN_CLASS = 'csIsOpen';
+const SECTION_OPENING_CLASS = 'csIsOpening';
+const SECTION_CLOSING_CLASS = 'csIsClosing';
 
+export const CollapsableSection = (props: TCollapsableSection) => {
+  const {
+    id,
+    content,
+    title,
+    icon,
+    onlyIconClick,
+    isClosed,
+    keepContentWhenClosed,
+    animSpeed: speed,
+  } = props;
+  const animSpeed = speed !== undefined ? speed : DEFAULT_ANIM_SPEED_MS;
   let isSectionOpen = Boolean(!isClosed);
 
   let contentCmp: TCMP | null = null;
   const createContent = () => {
-    if (typeof content === 'object' && 'isCmp' in content) {
-      contentCmp = content;
-    } else if (typeof content === 'string') {
-      contentCmp = CMP({ text: content });
+    if ((typeof content === 'object' && 'isCmp' in content) || typeof content === 'string') {
+      contentCmp = CMP({ html: () => `<div class="csContent">${content}</div>` });
     } else {
-      contentCmp = CMP(content);
+      contentCmp = CMP({ html: () => `<div class="csContent">${CMP(content)}</div>` });
     }
-    contentCmp.updateClass('csContent', 'add');
     outerCmp.add(contentCmp);
   };
 
   const closeSection = () => {
-    // @TODO: add animation
-    outerCmp.updateClass(SECTION_OPEN_CLASS, 'remove');
     isSectionOpen = false;
-    if (keepContentWhenHidden) return;
-    if (contentCmp) contentCmp.remove();
-    contentCmp = null;
+    if (contentCmp) {
+      const prevContentHeight = contentCmp.elem.offsetHeight;
+      const contentHeight = contentCmp.elem.offsetHeight;
+      contentCmp.updateStyle({
+        maxHeight: null,
+        overflow: null,
+        height: null,
+        transition: null,
+      });
+      if (prevContentHeight) {
+        contentCmp.updateStyle({
+          height: `${prevContentHeight}px`,
+          maxHeight: `${prevContentHeight}px`,
+        });
+      }
+      contentCmp.updateStyle({
+        overflow: 'hidden',
+        height: `${contentHeight}px`,
+        maxHeight: `${contentHeight}px`,
+        transition: `max-height ${animSpeed}ms ease-out`,
+      });
+    }
+    outerCmp.updateClass(SECTION_OPEN_CLASS, 'remove');
+    outerCmp.updateClass(SECTION_OPENING_CLASS, 'remove');
+    outerCmp.updateAnim([
+      { duration: 0 },
+      {
+        phaseStartFn: () => {
+          outerCmp.updateClass(SECTION_CLOSING_CLASS, 'add');
+          if (contentCmp) contentCmp.updateStyle({ maxHeight: 0 });
+        },
+        duration: animSpeed,
+        phaseEndFn: (cmp) => {
+          cmp.updateClass(SECTION_CLOSING_CLASS, 'remove');
+          if (contentCmp) {
+            contentCmp.updateStyle({
+              maxHeight: null,
+              overflow: null,
+              height: null,
+              transition: null,
+            });
+            if (keepContentWhenClosed) return;
+            contentCmp.remove();
+            contentCmp = null;
+          }
+        },
+      },
+    ]);
   };
 
   const openSection = () => {
-    if (!contentCmp) createContent();
-    outerCmp.updateClass(SECTION_OPEN_CLASS, 'add');
     isSectionOpen = true;
-    // @TODO: add animation
+    outerCmp.updateClass(SECTION_CLOSING_CLASS, 'remove');
+    let contentHeight = 0;
+    if (!contentCmp) createContent();
+    if (contentCmp) {
+      outerCmp.updateClass(SECTION_OPEN_CLASS, 'add');
+      contentHeight = contentCmp.elem.offsetHeight;
+      outerCmp.updateClass(SECTION_OPEN_CLASS, 'remove');
+      contentCmp.updateStyle({
+        overflow: 'hidden',
+        height: `${contentHeight}px`,
+        maxHeight: 0,
+        transition: `max-height ${animSpeed}ms ease-out`,
+      });
+    }
+    outerCmp.updateAnim([
+      { duration: 0 },
+      {
+        phaseStartFn: () => {
+          outerCmp.updateClass(SECTION_OPENING_CLASS, 'add');
+          if (contentCmp) contentCmp.updateStyle({ maxHeight: `${contentHeight}px` });
+        },
+        duration: animSpeed,
+        phaseEndFn: (cmp) => {
+          cmp.updateClass(SECTION_OPEN_CLASS, 'add');
+          cmp.updateClass(SECTION_OPENING_CLASS, 'remove');
+          if (contentCmp)
+            contentCmp.updateStyle({
+              maxHeight: null,
+              overflow: null,
+              height: null,
+              transition: null,
+            });
+        },
+      },
+    ]);
   };
 
   const onClick = (e: Event) => {
@@ -104,7 +195,10 @@ export const CollapsableSection = (props: TCollapsableSection) => {
       onClick,
     });
   }
-  if (iconCmp && typeof iconCmp !== 'string') iconCmp.updateClass('csToggleIcon', 'add');
+  if (iconCmp && typeof iconCmp !== 'string') {
+    iconCmp.updateClass('csToggleIcon', 'add');
+    iconCmp.updateStyle({ transition: 'all 230ms ease' });
+  }
 
   const headerCmp = CMP({
     html: () => `<header class="csHeader"${icon === false ? ' tabindex="0"' : ''}>
@@ -119,9 +213,9 @@ export const CollapsableSection = (props: TCollapsableSection) => {
       id,
       html: () => `<section class="${classes(
         props.class,
-        'collapsableSection',
+        SECTION_MAIN_CLASS,
         isClosed ? null : SECTION_OPEN_CLASS,
-        keepContentWhenHidden ? 'keepSectionContent' : null
+        keepContentWhenClosed ? 'keepSectionContent' : null
       ).join(' ')}">
   ${headerCmp}
 </section>`,
@@ -130,7 +224,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
     props
   );
 
-  if (!isClosed || keepContentWhenHidden) {
+  if (!isClosed || keepContentWhenClosed) {
     createContent();
   }
 
@@ -148,6 +242,10 @@ const css = `
   border-radius: 4px;
   padding: 8px 16px;
   position: relative;
+}
+.${SECTION_OPENING_CLASS} .csHeader,
+.${SECTION_CLOSING_CLASS} .csHeader {
+  border-radius: 4px 4px 0 0;
 }
 .csIsOpen .csHeader {
   border-radius: 4px 4px 0 0;
@@ -176,25 +274,46 @@ const css = `
   background-color: #333;
   position: absolute;
   top: 6px;
+  transition: inherit;
 }
 .csToggleIcon:before {
   left: 6px;
-  transform: rotate(45deg);
+  transform: rotate(-135deg);
 }
 .csToggleIcon:after {
   right: 6px;
+  transform: rotate(135deg);
+}
+.${SECTION_OPEN_CLASS} .csToggleIcon:before,
+.${SECTION_OPENING_CLASS} .csToggleIcon:before {
   transform: rotate(-45deg);
 }
-.csIsOpen .csToggleIcon:before {
-  transform: rotate(-45deg);
-}
-.csIsOpen .csToggleIcon:after {
+.${SECTION_OPEN_CLASS} .csToggleIcon:after,
+.${SECTION_OPENING_CLASS} .csToggleIcon:after {
   transform: rotate(45deg);
 }
 .csContent {
+  box-sizing: border-box;
   border: 1px solid #333;
   border-top: none;
   border-radius: 0 0 4px 4px;
-  padding: 16px;
+  padding: 0;
+  height: 0;
+  max-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.${SECTION_OPEN_CLASS} .csContent {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.${SECTION_OPEN_CLASS} .csContent:before {
+  /* Fixes margin collapsing, if the first child
+  would have a top-margin defined */
+  display: block;
+  content: "";
+  width: 100%;
+  height: 1px;
 }
 `;

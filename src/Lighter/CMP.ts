@@ -715,6 +715,7 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
       setPropsValue(cmp, { style: { ...cmp.props?.style, [prop]: valueAsString } });
     } else if (value === null) {
       cmp.elem.style.removeProperty(prop);
+      cmp.elem.style[prop as unknown as number] = '';
       if (cmp.props?.style) delete cmp.props.style[prop];
     }
   }

@@ -232,6 +232,9 @@ export const Base = (props?: TProps) => {
     CollapsableSection({
       title: 'My Section',
       content: 'My Content',
+      // onlyIconClick: true,
+      // isClosed: true,
+      // keepContentWhenHidden: true,
       // icon: { html: '<span>ICN</span>' },
     })
   );

@@ -1,10 +1,9 @@
-import { classes, CMP, type TCMP, type TProps } from '../../Lighter/CMP';
+import { addStylesToHead, classes, CMP, type TCMP, type TProps } from '../../Lighter/CMP';
 
 export type TCollapsableSection = {
   /** CMP ID. */
   id?: string;
 
-  // @TODO
   /** The Collapsable Section content.
    * Required.
    */
@@ -23,7 +22,12 @@ export type TCollapsableSection = {
    */
   icon?: TCMP | TProps | boolean;
 
-  // @TODO
+  /** When true, only the icon click toggles
+   * the section open/closed (the header
+   * cannot be then clicked). Default is false.
+   */
+  onlyIconClick?: boolean;
+
   /** Whether the Section is closed to
    * start with or not. Default is false
    * (Section is open).
@@ -47,10 +51,23 @@ export type TCollapsableSectionControls = {
 };
 
 export const CollapsableSection = (props: TCollapsableSection) => {
-  const SECTION_OPEN_CLASS = 'sectionIsOpen';
-  const { id, content, title, icon, isClosed, keepContentWhenHidden } = props;
+  const SECTION_OPEN_CLASS = 'csIsOpen';
+  const { id, content, title, icon, onlyIconClick, isClosed, keepContentWhenHidden } = props;
 
   let isSectionOpen = Boolean(!isClosed);
+
+  let contentCmp: TCMP | null = null;
+  const createContent = () => {
+    if (typeof content === 'object' && 'isCmp' in content) {
+      contentCmp = content;
+    } else if (typeof content === 'string') {
+      contentCmp = CMP({ text: content });
+    } else {
+      contentCmp = CMP(content);
+    }
+    contentCmp.updateClass('csContent', 'add');
+    outerCmp.add(contentCmp);
+  };
 
   const closeSection = () => {
     // @TODO: add animation
@@ -60,6 +77,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
     if (contentCmp) contentCmp.remove();
     contentCmp = null;
   };
+
   const openSection = () => {
     if (!contentCmp) createContent();
     outerCmp.updateClass(SECTION_OPEN_CLASS, 'add');
@@ -69,7 +87,6 @@ export const CollapsableSection = (props: TCollapsableSection) => {
 
   const onClick = (e: Event) => {
     e.stopPropagation();
-    console.log('TOGGLE SECTION', isSectionOpen);
     if (isSectionOpen) {
       closeSection();
       return;
@@ -84,17 +101,17 @@ export const CollapsableSection = (props: TCollapsableSection) => {
     iconCmp = CMP({
       tag: 'button',
       ...(icon !== true ? icon : {}),
-      class: classes(icon !== true ? icon?.class : null, 'sectionToggleIcon'),
       onClick,
     });
   }
+  if (iconCmp && typeof iconCmp !== 'string') iconCmp.updateClass('csToggleIcon', 'add');
 
   const headerCmp = CMP({
-    html: () => `<header class="cSectionHeader"${icon === false ? ' tabindex="0"' : ''}>
+    html: () => `<header class="csHeader"${icon === false ? ' tabindex="0"' : ''}>
   ${title ? `<h4>${title}</h4>` : ''}
   ${iconCmp}
 </header>`,
-    onClick,
+    ...(!onlyIconClick ? { onClick } : {}),
   });
 
   const outerCmp = CMP(
@@ -113,18 +130,6 @@ export const CollapsableSection = (props: TCollapsableSection) => {
     props
   );
 
-  let contentCmp: TCMP | null = null;
-  const createContent = () => {
-    if (typeof content === 'object' && 'isCmp' in content) {
-      contentCmp = content;
-    } else if (typeof content === 'string') {
-      contentCmp = CMP({ text: content });
-    } else {
-      contentCmp = CMP(content);
-    }
-    outerCmp.add(contentCmp);
-  };
-
   if (!isClosed || keepContentWhenHidden) {
     createContent();
   }
@@ -132,5 +137,64 @@ export const CollapsableSection = (props: TCollapsableSection) => {
   const controls: TCollapsableSectionControls = { closeSection, openSection };
   outerCmp.controls = controls;
 
+  addStylesToHead('collapsableSection', css);
+
   return outerCmp;
 };
+
+const css = `
+.csHeader {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 16px;
+  position: relative;
+}
+.csIsOpen .csHeader {
+  border-radius: 4px 4px 0 0;
+}
+.csHeader h4 {
+  margin: 0;
+  padding-right: 32px;
+}
+.csToggleIcon {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  margin-top: -10px;
+  right: 16px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+}
+.csToggleIcon:before,
+.csToggleIcon:after {
+  display: block;
+  content: "";
+  width: 2px;
+  height: 8px;
+  background-color: #333;
+  position: absolute;
+  top: 6px;
+}
+.csToggleIcon:before {
+  left: 6px;
+  transform: rotate(45deg);
+}
+.csToggleIcon:after {
+  right: 6px;
+  transform: rotate(-45deg);
+}
+.csIsOpen .csToggleIcon:before {
+  transform: rotate(-45deg);
+}
+.csIsOpen .csToggleIcon:after {
+  transform: rotate(45deg);
+}
+.csContent {
+  border: 1px solid #333;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  padding: 16px;
+}
+`;

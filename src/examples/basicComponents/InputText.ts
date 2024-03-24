@@ -113,6 +113,9 @@ export type TInputText = {
    * can be entered either as RegExp type or as a string which
    * will always get the global flag. Default is undefined. */
   forceRegex?: RegExp | string;
+
+  /** Input Text classes */
+  class?: string | string[];
 };
 
 type TInputAttr = {
@@ -329,6 +332,7 @@ export const InputText = (props: TInputText) => {
       id: props?.id || `input-text-cmp_${createNewId()}`,
       idAttr: props?.idAttr,
       html: getHtml,
+      class: props?.class,
     },
     InputText,
     props

@@ -100,6 +100,9 @@ export type TInputDropdown = {
   /** A custom icon (CMP) to show on top of the
    * dropdown "down arrow" icon. Default is undefined. */
   icon?: TProps;
+
+  /** Input Dropdown classes */
+  class?: string | string[];
 };
 
 type TInputAttr = {
@@ -145,10 +148,10 @@ export const InputDropdown = (props?: TInputDropdown) => {
   const validate = (value?: string) => {
     const ERROR_CLASS = 'inputHasError';
     if (props?.validationFn) {
-      const validationResult = props.validationFn(value, inputTextCmp);
+      const validationResult = props.validationFn(value, inputDropdownCmp);
       errorCmp.removeChildren();
       if (validationResult) {
-        inputTextCmp.updateClass(ERROR_CLASS, 'add');
+        inputDropdownCmp.updateClass(ERROR_CLASS, 'add');
         errorCmp.add(
           CMP(
             typeof validationResult === 'string'
@@ -157,9 +160,9 @@ export const InputDropdown = (props?: TInputDropdown) => {
           )
         );
       } else if (validationResult === '') {
-        inputTextCmp.updateClass(ERROR_CLASS, 'add');
+        inputDropdownCmp.updateClass(ERROR_CLASS, 'add');
       } else {
-        inputTextCmp.updateClass(ERROR_CLASS, 'remove');
+        inputDropdownCmp.updateClass(ERROR_CLASS, 'remove');
       }
     }
   };
@@ -284,15 +287,15 @@ export const InputDropdown = (props?: TInputDropdown) => {
         }
       }
       if (props?.validationFn) validate(value);
-      props?.onChange && props.onChange(e, inputTextCmp);
+      props?.onChange && props.onChange(e, inputDropdownCmp);
     },
     onFocus: (e) => {
-      inputTextCmp.updateClass('inputHasFocus', 'add');
-      props?.onFocus && props.onFocus(e, inputTextCmp);
+      inputDropdownCmp.updateClass('inputHasFocus', 'add');
+      props?.onFocus && props.onFocus(e, inputDropdownCmp);
     },
     onBlur: (e) => {
-      inputTextCmp.updateClass('inputHasFocus', 'remove');
-      props?.onBlur && props.onBlur(e, inputTextCmp);
+      inputDropdownCmp.updateClass('inputHasFocus', 'remove');
+      props?.onBlur && props.onBlur(e, inputDropdownCmp);
     },
     ...(listeners.length ? { listeners } : {}),
   });
@@ -311,19 +314,20 @@ export const InputDropdown = (props?: TInputDropdown) => {
 </div>
 `;
 
-  const inputTextCmp = CMP(
+  const inputDropdownCmp = CMP(
     {
       id: props?.id || `input-text-cmp_${createNewId()}`,
       idAttr: props?.idAttr,
       html: getHtml,
+      class: props?.class,
     },
     InputDropdown,
     props
   );
 
-  const errorCmp = inputTextCmp.add(CMP({ class: 'inputErrorMsg' }));
+  const errorCmp = inputDropdownCmp.add(CMP({ class: 'inputErrorMsg' }));
 
   validate(props?.value);
 
-  return inputTextCmp;
+  return inputDropdownCmp;
 };

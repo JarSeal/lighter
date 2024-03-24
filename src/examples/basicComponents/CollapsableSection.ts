@@ -41,7 +41,7 @@ export type TCollapsableSection = {
    */
   keepContentWhenClosed?: boolean;
 
-  /** Collapsable section classes */
+  /** Collapsable Section classes */
   class?: string | string[];
 
   /** Opening and closing animation speed in

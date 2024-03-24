@@ -1,4 +1,11 @@
-import { addStylesToHead, CMP, createNewId, type TCMP, type TProps } from '../../Lighter/CMP';
+import {
+  addStylesToHead,
+  classes,
+  CMP,
+  createNewId,
+  type TCMP,
+  type TProps,
+} from '../../Lighter/CMP';
 
 export type TTooltip = {
   /** CMP ID. */
@@ -56,6 +63,9 @@ export type TTooltip = {
    * Default can be set with setDefaultTooltipWidth util
    * (160px). */
   width?: string;
+
+  /** Tooltip classes */
+  class?: string | string[];
 };
 
 export const checkIfElemFullyInView = (elem: HTMLElement) => {
@@ -244,7 +254,7 @@ export const Tooltip = (props: TTooltip) => {
     props
   );
 
-  let outerClasses = [];
+  let outerClasses = classes(props.class);
   if (wrapper?.class) {
     outerClasses = typeof wrapper.class === 'string' ? [wrapper.class] : wrapper.class;
     if (showOnHover) outerClasses.push('hoverable');

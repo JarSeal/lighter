@@ -236,6 +236,9 @@ export type TInputNumber = {
    * will be placed at the end of the value. Default is
    * undefined. */
   selectTextOnFocus?: boolean | 'start' | 'end';
+
+  /** Input Number classes */
+  class?: string | string[];
 };
 
 type TInputAttr = {
@@ -556,6 +559,7 @@ export const InputNumber = (props?: TInputNumber) => {
       id: props?.id || `input-number-cmp_${createNewId()}`,
       idAttr: props?.idAttr,
       html: getHtml,
+      class: props?.class,
     },
     InputNumber,
     props

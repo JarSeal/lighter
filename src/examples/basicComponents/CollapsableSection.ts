@@ -87,15 +87,18 @@ export const CollapsableSection = (props: TCollapsableSection) => {
 
   const closeSection = () => {
     isSectionOpen = false;
+    let speed = animSpeed;
     if (contentCmp) {
       const prevContentHeight = contentCmp.elem.offsetHeight;
-      const contentHeight = contentCmp.elem.offsetHeight;
       contentCmp.updateStyle({
         maxHeight: null,
         overflow: null,
         height: null,
         transition: null,
       });
+      const contentHeight = contentCmp.elem.offsetHeight;
+      speed = prevContentHeight !== contentHeight ? animSpeed : animSpeed;
+      console.log('SPEED', speed, prevContentHeight, contentHeight);
       if (prevContentHeight) {
         contentCmp.updateStyle({
           height: `${prevContentHeight}px`,
@@ -106,7 +109,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
         overflow: 'hidden',
         height: `${contentHeight}px`,
         maxHeight: `${contentHeight}px`,
-        transition: `max-height ${animSpeed}ms ease-out`,
+        transition: `max-height ${speed}ms ease-out`,
       });
     }
     outerCmp.updateClass(SECTION_OPEN_CLASS, 'remove');
@@ -118,7 +121,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
           outerCmp.updateClass(SECTION_CLOSING_CLASS, 'add');
           if (contentCmp) contentCmp.updateStyle({ maxHeight: 0 });
         },
-        duration: animSpeed,
+        duration: speed,
         phaseEndFn: (cmp) => {
           cmp.updateClass(SECTION_CLOSING_CLASS, 'remove');
           if (contentCmp) {
@@ -141,16 +144,27 @@ export const CollapsableSection = (props: TCollapsableSection) => {
     isSectionOpen = true;
     outerCmp.updateClass(SECTION_CLOSING_CLASS, 'remove');
     let contentHeight = 0;
+    let speed = animSpeed;
     if (!contentCmp) createContent();
     if (contentCmp) {
+      const prevContentHeight = contentCmp.elem.offsetHeight;
       outerCmp.updateClass(SECTION_OPEN_CLASS, 'add');
+      contentCmp.updateStyle({
+        maxHeight: null,
+        overflow: null,
+        height: null,
+        transition: null,
+      });
       contentHeight = contentCmp.elem.offsetHeight;
       outerCmp.updateClass(SECTION_OPEN_CLASS, 'remove');
+      speed = prevContentHeight
+        ? ((contentHeight - prevContentHeight) / contentHeight) * animSpeed
+        : animSpeed;
       contentCmp.updateStyle({
         overflow: 'hidden',
         height: `${contentHeight}px`,
-        maxHeight: 0,
-        transition: `max-height ${animSpeed}ms ease-out`,
+        maxHeight: `${prevContentHeight || 0}px`,
+        transition: `max-height ${speed}ms ease-out`,
       });
     }
     outerCmp.updateAnim([
@@ -160,7 +174,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
           outerCmp.updateClass(SECTION_OPENING_CLASS, 'add');
           if (contentCmp) contentCmp.updateStyle({ maxHeight: `${contentHeight}px` });
         },
-        duration: animSpeed,
+        duration: speed,
         phaseEndFn: (cmp) => {
           cmp.updateClass(SECTION_OPEN_CLASS, 'add');
           cmp.updateClass(SECTION_OPENING_CLASS, 'remove');
@@ -308,7 +322,7 @@ const css = `
   max-height: none;
   overflow: visible;
 }
-.${SECTION_OPEN_CLASS} .csContent:before {
+.csContent:before {
   /* Fixes margin collapsing, if the first child
   would have a top-margin defined */
   display: block;

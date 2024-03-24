@@ -83,9 +83,9 @@ export const Nav = () => {
     </li>
   </ul>`;
 
-  const navCmp = CMP({ html: getHtml, id: 'sukka', idAttr: true });
+  const navCmp = CMP({ html: getHtml, idAttr: true });
 
-  navCmp.add({ tag: 'li', id: 'different', idAttr: true, text: 'Different' });
+  navCmp.add({ tag: 'li', idAttr: true, text: 'Different' });
 
   setTimeout(() => {
     navCmp.updateAnim([

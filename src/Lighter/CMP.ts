@@ -715,6 +715,7 @@ const updateCmpStyle = (cmp: TCMP, newStyle: TStyle) => {
       setPropsValue(cmp, { style: { ...cmp.props?.style, [prop]: valueAsString } });
     } else if (value === null) {
       cmp.elem.style.removeProperty(prop);
+      cmp.elem.style[prop as unknown as number] = '';
       if (cmp.props?.style) delete cmp.props.style[prop];
     }
   }
@@ -938,15 +939,29 @@ const stylesInHead: { [key: string]: boolean } = {};
 export const addStylesToHead = (id: string, css: string) => {
   if (stylesInHead[id]) return;
 
-  const titleElem = document.querySelector('head title');
+  const headElem = document.querySelector('head');
   const styleElem = document.createElement('style');
   styleElem.textContent = css;
-  if (titleElem) {
-    titleElem.insertAdjacentElement('afterend', styleElem);
+  if (headElem) {
+    headElem.insertAdjacentElement('afterbegin', styleElem);
   } else {
-    const headElem = document.querySelector('head');
-    if (headElem) headElem.appendChild(styleElem);
+    const bodyElem = document.querySelector('body');
+    if (bodyElem) bodyElem.appendChild(styleElem);
   }
 
   stylesInHead[id] = true;
+};
+
+export const classes = (...classArgs: (string | string[] | undefined | null)[]) => {
+  let classes: string | string[] = [];
+  for (let i = 0; i < classArgs.length; i++) {
+    const c = classArgs[i];
+    if (!c) continue;
+    if (typeof c === 'string') {
+      classes.push(c);
+      continue;
+    }
+    classes = [...classes, ...c];
+  }
+  return classes;
 };

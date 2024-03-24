@@ -235,7 +235,7 @@ export const Base = (props?: TProps) => {
         html: () => `${Nav()}`,
         style: { padding: '16px' },
       },
-      animSpeed: 1000,
+      // animSpeed: 1000,
       // onlyIconClick: true,
       // isClosed: true,
       // keepContentWhenClosed: true,

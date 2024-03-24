@@ -74,6 +74,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
   } = props;
   const animSpeed = speed !== undefined ? speed : DEFAULT_ANIM_SPEED_MS;
   let isSectionOpen = Boolean(!isClosed);
+  let fullContentHeight = 0;
 
   let contentCmp: TCMP | null = null;
   const createContent = () => {
@@ -90,15 +91,11 @@ export const CollapsableSection = (props: TCollapsableSection) => {
     let speed = animSpeed;
     if (contentCmp) {
       const prevContentHeight = contentCmp.elem.offsetHeight;
-      contentCmp.updateStyle({
-        maxHeight: null,
-        overflow: null,
-        height: null,
-        transition: null,
-      });
       const contentHeight = contentCmp.elem.offsetHeight;
-      speed = prevContentHeight !== contentHeight ? animSpeed : animSpeed;
-      console.log('SPEED', speed, prevContentHeight, contentHeight);
+      speed =
+        fullContentHeight !== prevContentHeight && fullContentHeight !== 0
+          ? (prevContentHeight / fullContentHeight) * animSpeed
+          : animSpeed;
       if (prevContentHeight) {
         contentCmp.updateStyle({
           height: `${prevContentHeight}px`,
@@ -156,6 +153,7 @@ export const CollapsableSection = (props: TCollapsableSection) => {
         transition: null,
       });
       contentHeight = contentCmp.elem.offsetHeight;
+      fullContentHeight = contentHeight;
       outerCmp.updateClass(SECTION_OPEN_CLASS, 'remove');
       speed = prevContentHeight
         ? ((contentHeight - prevContentHeight) / contentHeight) * animSpeed

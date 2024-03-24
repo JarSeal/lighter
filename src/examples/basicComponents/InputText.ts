@@ -19,12 +19,12 @@ export type TInputText = {
   idAttr?: boolean;
 
   /** Whether the type of the input attribute is
-   * "password" or "text". Default is 'text'. */
+   * "password" or "text".Default is "text"
+   * (isPassword: false). */
   isPassword?: boolean;
 
   /** Label can either be a string (just text) or
-   * sub component props (any component props).
-   * Default is undefined. */
+   * sub component props. Default is undefined. */
   label?: string | TProps;
 
   /** Whether the label has a wrapping element

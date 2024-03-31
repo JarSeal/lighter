@@ -28,6 +28,12 @@ export type TInputCheckbox = {
 
   /** Input Text classes */
   class?: string | string[];
+
+  /** Whether the input elem should be rendered after
+   * the label text. Default is false (will be
+   * rendered before the text).
+   */
+  renderInputAfterLabel?: boolean;
 };
 
 export const InputCheckbox = (props?: TInputCheckbox) => {
@@ -59,7 +65,19 @@ export const InputCheckbox = (props?: TInputCheckbox) => {
       }${labelEndTag}`
     : '';
 
-  const getHtml = () => `<div></div>`;
+  const inputElem = CMP({
+    id: inputId,
+    idAttr: props?.idAttr,
+    html: () => `<input type="checkbox" />`,
+  });
+
+  const getHtml = () => `<div class="inputField inputCheckbox">
+  <label${props?.idAttr ? ` for="${inputId}"` : ''}>
+    ${props?.renderInputAfterLabel ? '' : inputElem}
+    ${labelHtml}
+    ${props?.renderInputAfterLabel ? inputElem : ''}
+  </label>
+</div>`;
 
   const inputChecboxCmp = CMP(
     {

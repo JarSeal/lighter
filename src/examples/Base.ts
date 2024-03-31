@@ -1,6 +1,7 @@
 import { CMP, getCmpById, type TProps } from '../Lighter/CMP';
 import { Button } from './basicComponents/Button';
 import { CollapsableSection } from './basicComponents/CollapsableSection';
+import { InputCheckbox } from './basicComponents/InputCheckbox';
 import { InputDropdown } from './basicComponents/InputDropdown';
 import { InputNumber, TInputNumber } from './basicComponents/InputNumber';
 import { InputText } from './basicComponents/InputText';
@@ -240,6 +241,14 @@ export const Base = (props?: TProps) => {
       // isClosed: true,
       // keepContentWhenClosed: true,
       // icon: { html: '<span>ICN</span>' },
+    })
+  );
+
+  // Checkbox
+  baseCmp.add(
+    InputCheckbox({
+      label: 'Checkbox label',
+      // renderInputAfterLabel: true,
     })
   );
 

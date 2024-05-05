@@ -248,7 +248,12 @@ export const Base = (props?: TProps) => {
   baseCmp.add(
     InputCheckbox({
       label: 'Checkbox label',
+      // checked: true,
       // renderInputAfterLabel: true,
+      validationFn: (checked) => {
+        if (!checked) return 'Required';
+        return null;
+      },
     })
   );
 

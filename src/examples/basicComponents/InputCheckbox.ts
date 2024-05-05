@@ -1,4 +1,11 @@
-import { CMP, type TProps, createNewId } from '../../Lighter/CMP';
+import {
+  CMP,
+  type TProps,
+  createNewId,
+  TCMP,
+  TListener,
+  TListenerCreator,
+} from '../../Lighter/CMP';
 
 export type TInputCheckbox = {
   /** Id to be used for the "for" attribute
@@ -34,11 +41,33 @@ export type TInputCheckbox = {
    * rendered before the text).
    */
   renderInputAfterLabel?: boolean;
+
+  /** Runs the validationFn for every change event
+   * and on the component initialization. Returns either
+   * a message string, CMP props, or null. If not null,
+   * an error class is added to the main (label) component
+   * and creates the error CMP with the message
+   * (with an empty string, only the class is added).
+   * Default is undefined. */
+  validationFn?: (value: boolean | undefined, cmp: TCMP) => string | TProps | null;
+
+  /** The input fields change listener. Default is undefined. */
+  onChange?: TListener;
+
+  /** The input field focus listener. Default is undefined. */
+  onFocus?: TListener;
+
+  /** The input field blur listener. Default is undefined. */
+  onBlur?: TListener;
+
+  /** Input field's listeners. Default is undefined. */
+  listeners?: TListenerCreator[];
 };
 
 export const InputCheckbox = (props?: TInputCheckbox) => {
   const baseId = props?.id || createNewId();
   const inputId = `input_${baseId}`;
+  const listeners = props?.listeners || [];
 
   // Label
   const LABEL_CLASS = 'inputLabel';
@@ -68,14 +97,14 @@ export const InputCheckbox = (props?: TInputCheckbox) => {
   const inputElem = CMP({
     id: inputId,
     idAttr: props?.idAttr,
-    html: () => `<input type="checkbox" />`,
+    html: () => `<input type="checkbox"${props?.checked ? ' checked="true"' : ''} />`,
   });
 
   const getHtml = () => `<div class="inputField inputCheckbox">
   <label${props?.idAttr ? ` for="${inputId}"` : ''}>
-    ${props?.renderInputAfterLabel ? '' : inputElem}
+    ${(!props?.renderInputAfterLabel && inputElem) || ''}
     ${labelHtml}
-    ${props?.renderInputAfterLabel ? inputElem : ''}
+    ${(props?.renderInputAfterLabel && inputElem) || ''}
   </label>
 </div>`;
 
@@ -85,14 +114,52 @@ export const InputCheckbox = (props?: TInputCheckbox) => {
       idAttr: props?.idAttr,
       html: getHtml,
       class: props?.class,
+      onChange: (e) => {
+        const checked = (e.target as HTMLInputElement).checked;
+        if (props) props.checked = checked;
+        if (props?.validationFn) validate(checked);
+        props?.onChange && props.onChange(e, inputChecboxCmp);
+      },
+      onFocus: (e) => {
+        inputChecboxCmp.updateClass('inputHasFocus', 'add');
+        props?.onFocus && props.onFocus(e, inputChecboxCmp);
+      },
+      onBlur: (e) => {
+        inputChecboxCmp.updateClass('inputHasFocus', 'remove');
+        props?.onBlur && props.onBlur(e, inputChecboxCmp);
+      },
+      ...(listeners.length ? { listeners } : {}),
     },
     InputCheckbox,
     props
   );
 
-  // const errorCmp = inputChecboxCmp.add(CMP({ class: 'inputErrorMsg' }));
+  // Validation
+  const validate = (checked?: boolean) => {
+    const ERROR_CLASS = 'inputHasError';
+    if (props?.validationFn) {
+      const validationResult = props.validationFn(checked, inputChecboxCmp);
+      errorCmp.removeChildren();
+      if (validationResult) {
+        inputChecboxCmp.updateClass(ERROR_CLASS, 'add');
+        errorCmp.add(
+          CMP(
+            typeof validationResult === 'string'
+              ? { tag: 'span', text: validationResult }
+              : validationResult
+          )
+        );
+      } else if (validationResult === '') {
+        inputChecboxCmp.updateClass(ERROR_CLASS, 'add');
+      } else {
+        inputChecboxCmp.updateClass(ERROR_CLASS, 'remove');
+      }
+    }
+  };
 
-  // validate(props?.checked);
+  const errorCmp = inputChecboxCmp.add(CMP({ class: 'inputErrorMsg' }));
+
+  validate(props?.checked);
 
   return inputChecboxCmp;
 };
